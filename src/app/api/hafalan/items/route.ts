@@ -14,9 +14,19 @@ export async function GET(request: NextRequest) {
     const page = parseInt(searchParams.get("page") || "1");
     const limit = parseInt(searchParams.get("limit") || "50");
 
-    const where: Record<string, unknown> = {};
+    // Get user tier for access control
+    const userTier = session?.user?.tier || "FREE";
+    const tierOrder = ["FREE", "BRONZE", "SILVER", "GOLD", "PATRON"];
+    const userTierIndex = tierOrder.indexOf(userTier);
+    const accessibleTiers = tierOrder.slice(0, userTierIndex + 1);
+
+    const where: Record<string, unknown> = {
+      minTier: { in: accessibleTiers },
+    };
     
     if (id) {
+      // Allow access to specific item regardless of tier (for viewing)
+      delete where.minTier;
       where.id = id;
     }
     
@@ -27,14 +37,19 @@ export async function GET(request: NextRequest) {
     if (surah) {
       where.surahNumber = parseInt(surah);
     }
+    
+    const juz = searchParams.get("juz");
+    if (juz) {
+      where.juzNumber = parseInt(juz);
+    }
 
     const [items, total] = await Promise.all([
       prisma.hafalanItem.findMany({
         where,
         orderBy: [
+          { orderIndex: "asc" },
           { surahNumber: "asc" },
           { ayahStart: "asc" },
-          { orderIndex: "asc" },
         ],
         skip: (page - 1) * limit,
         take: limit,
@@ -49,7 +64,9 @@ export async function GET(request: NextRequest) {
           surahNumber: true,
           ayahStart: true,
           ayahEnd: true,
+          juzNumber: true,
           haditsNumber: true,
+          minTier: true,
           orderIndex: true,
         },
       }),

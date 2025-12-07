@@ -192,6 +192,7 @@ model HafalanItem {
   surahNumber     Int?
   ayahStart       Int?
   ayahEnd         Int?
+  juzNumber       Int?
   
   // For Hadits/Matan
   kitabId         String?
@@ -205,6 +206,9 @@ model HafalanItem {
   transliteration String?   @db.Text
   audioUrl        String?
   
+  // Access control
+  minTier         Tier      @default(FREE)
+  
   // Order
   orderIndex      Int       @default(0)
   
@@ -217,6 +221,8 @@ model HafalanItem {
   
   @@index([type])
   @@index([surahNumber, ayahStart])
+  @@index([juzNumber])
+  @@index([minTier])
 }
 
 model HafalanSubmission {

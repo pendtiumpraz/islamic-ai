@@ -13,7 +13,9 @@ interface HafalanItem {
   surahNumber: number | null;
   ayahStart: number | null;
   ayahEnd: number | null;
+  juzNumber: number | null;
   haditsNumber: number | null;
+  minTier: string;
   arabicText: string;
   progress?: {
     status: string;
@@ -48,10 +50,18 @@ const statusLabels: Record<string, string> = {
   MEMORIZED: "Hafal",
 };
 
+const tierColors: Record<string, string> = {
+  FREE: "bg-gray-100 text-gray-700",
+  BRONZE: "bg-amber-100 text-amber-800",
+  SILVER: "bg-slate-200 text-slate-700",
+  GOLD: "bg-yellow-100 text-yellow-800",
+};
+
 export default function HafidzPage() {
   const [items, setItems] = useState<HafalanItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedType, setSelectedType] = useState<string | null>(null);
+  const [selectedJuz, setSelectedJuz] = useState<number | null>(null);
 
   useEffect(() => {
     fetch("/api/hafalan/items")
@@ -64,9 +74,13 @@ export default function HafidzPage() {
   }, []);
 
   const types = Array.from(new Set(items.map((i) => i.type)));
-  const filteredItems = selectedType
-    ? items.filter((i) => i.type === selectedType)
-    : items;
+  const juzList = Array.from(new Set(items.filter(i => i.juzNumber).map((i) => i.juzNumber))).sort((a, b) => (b || 0) - (a || 0));
+  
+  const filteredItems = items.filter((i) => {
+    if (selectedType && i.type !== selectedType) return false;
+    if (selectedJuz && i.juzNumber !== selectedJuz) return false;
+    return true;
+  });
 
   if (loading) {
     return (
@@ -98,25 +112,51 @@ export default function HafidzPage() {
           </p>
         </div>
 
-        {/* Type Filter */}
-        <div className="flex flex-wrap gap-2 mb-6">
-          <Button
-            variant={selectedType === null ? "default" : "outline"}
-            size="sm"
-            onClick={() => setSelectedType(null)}
-          >
-            Semua
-          </Button>
-          {types.map((type) => (
+        {/* Filters */}
+        <div className="space-y-3 mb-6">
+          {/* Type Filter */}
+          <div className="flex flex-wrap gap-2">
+            <span className="text-sm text-gray-500 py-1">Tipe:</span>
             <Button
-              key={type}
-              variant={selectedType === type ? "default" : "outline"}
+              variant={selectedType === null ? "default" : "outline"}
               size="sm"
-              onClick={() => setSelectedType(type)}
+              onClick={() => setSelectedType(null)}
             >
-              {typeLabels[type] || type}
+              Semua
             </Button>
-          ))}
+            {types.map((type) => (
+              <Button
+                key={type}
+                variant={selectedType === type ? "default" : "outline"}
+                size="sm"
+                onClick={() => setSelectedType(type)}
+              >
+                {typeLabels[type] || type}
+              </Button>
+            ))}
+          </div>
+          
+          {/* Juz Filter */}
+          <div className="flex flex-wrap gap-2">
+            <span className="text-sm text-gray-500 py-1">Juz:</span>
+            <Button
+              variant={selectedJuz === null ? "default" : "outline"}
+              size="sm"
+              onClick={() => setSelectedJuz(null)}
+            >
+              Semua
+            </Button>
+            {juzList.map((juz) => (
+              <Button
+                key={juz}
+                variant={selectedJuz === juz ? "default" : "outline"}
+                size="sm"
+                onClick={() => setSelectedJuz(juz)}
+              >
+                Juz {juz}
+              </Button>
+            ))}
+          </div>
         </div>
 
         {/* Stats */}
@@ -159,10 +199,18 @@ export default function HafidzPage() {
             <Link key={item.id} href={`/dashboard/hafidz/${item.id}`}>
               <Card className="h-full hover:shadow-lg transition-shadow cursor-pointer">
                 <CardHeader className="pb-3">
-                  <div className="flex items-start justify-between">
-                    <Badge className={typeColors[item.type]}>
-                      {typeLabels[item.type]}
-                    </Badge>
+                  <div className="flex items-start justify-between gap-1 flex-wrap">
+                    <div className="flex gap-1">
+                      <Badge className={typeColors[item.type]}>
+                        {typeLabels[item.type]}
+                      </Badge>
+                      {item.juzNumber && (
+                        <Badge variant="outline">Juz {item.juzNumber}</Badge>
+                      )}
+                      <Badge className={tierColors[item.minTier]}>
+                        {item.minTier}
+                      </Badge>
+                    </div>
                     {item.progress && (
                       <Badge className={statusColors[item.progress.status]}>
                         {statusLabels[item.progress.status]}
@@ -172,7 +220,7 @@ export default function HafidzPage() {
                   <CardTitle className="text-lg mt-2">{item.title}</CardTitle>
                   {item.surahNumber && (
                     <CardDescription>
-                      Surah {item.surahNumber}, Ayat {item.ayahStart}-{item.ayahEnd}
+                      Ayat {item.ayahStart}-{item.ayahEnd}
                     </CardDescription>
                   )}
                   {item.haditsNumber && (
