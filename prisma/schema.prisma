@@ -1,0 +1,341 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ==================== USER & AUTH ====================
+
+model User {
+  id              String    @id @default(cuid())
+  email           String    @unique
+  name            String
+  image           String?
+  googleId        String?   @unique
+  
+  tier            Tier      @default(FREE)
+  totalDonation   Int       @default(0)
+  preferredLang   Language  @default(ID)
+  
+  // Usage tracking (reset daily)
+  dailyChatCount    Int       @default(0)
+  dailyHafalanCount Int       @default(0)
+  dailyWriteCount   Int       @default(0)
+  lastActiveDate    DateTime  @default(now())
+  
+  // Relations
+  accounts        Account[]
+  sessions        Session[]
+  chatSessions    ChatSession[]
+  hafalanSubmissions HafalanSubmission[]
+  hafalanProgress HafalanProgress[]
+  donations       Donation[]
+  
+  // Soft Delete
+  deletedAt       DateTime?
+  deletedBy       String?
+  deleteReason    String?
+  
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  
+  @@index([deletedAt])
+  @@index([email])
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+// ==================== ENUMS ====================
+
+enum Tier {
+  FREE
+  BRONZE
+  SILVER
+  GOLD
+  PATRON
+}
+
+enum Language {
+  AR
+  EN
+  ID
+}
+
+enum ModuleCategory {
+  QURAN_TAFSIR
+  HADITS
+  FIQIH
+  AKIDAH_SEJARAH
+}
+
+// ==================== AI CHAT ====================
+
+model AIModule {
+  id              String    @id @default(cuid())
+  slug            String    @unique
+  name            String
+  nameAr          String?
+  description     String    @db.Text
+  category        ModuleCategory
+  icon            String?
+  
+  // Access control
+  minTier         Tier      @default(FREE)
+  isActive        Boolean   @default(true)
+  
+  // AI Config
+  systemPrompt    String    @db.Text
+  temperature     Float     @default(0.7)
+  
+  // Relations
+  chatSessions    ChatSession[]
+  
+  // Soft Delete
+  deletedAt       DateTime?
+  
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  
+  @@index([category])
+  @@index([deletedAt])
+}
+
+model ChatSession {
+  id              String    @id @default(cuid())
+  userId          String
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  moduleId        String
+  module          AIModule  @relation(fields: [moduleId], references: [id])
+  
+  title           String?
+  
+  messages        ChatMessage[]
+  
+  // Soft Delete
+  deletedAt       DateTime?
+  deletedBy       String?
+  
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  
+  @@index([userId])
+  @@index([deletedAt])
+}
+
+model ChatMessage {
+  id              String    @id @default(cuid())
+  sessionId       String
+  session         ChatSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  
+  role            MessageRole
+  content         String    @db.Text
+  metadata        Json?
+  
+  // Soft Delete
+  deletedAt       DateTime?
+  
+  createdAt       DateTime  @default(now())
+  
+  @@index([sessionId])
+  @@index([deletedAt])
+}
+
+enum MessageRole {
+  USER
+  ASSISTANT
+  SYSTEM
+}
+
+// ==================== HAFIDZ MODE ====================
+
+model HafalanItem {
+  id              String    @id @default(cuid())
+  type            HafalanType
+  
+  // For Quran
+  surahNumber     Int?
+  ayahStart       Int?
+  ayahEnd         Int?
+  
+  // For Hadits/Matan
+  kitabId         String?
+  babNumber       Int?
+  haditsNumber    Int?
+  
+  // Content
+  title           String
+  arabicText      String    @db.Text
+  translation     String?   @db.Text
+  transliteration String?   @db.Text
+  audioUrl        String?
+  
+  // Order
+  orderIndex      Int       @default(0)
+  
+  // Relations
+  submissions     HafalanSubmission[]
+  progress        HafalanProgress[]
+  
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  
+  @@index([type])
+  @@index([surahNumber, ayahStart])
+}
+
+model HafalanSubmission {
+  id              String    @id @default(cuid())
+  
+  userId          String
+  user            User      @relation(fields: [userId], references: [id])
+  itemId          String
+  item            HafalanItem @relation(fields: [itemId], references: [id])
+  itemType        HafalanType
+  
+  mode            SubmissionMode
+  
+  // Scores
+  score           Int
+  passed          Boolean
+  accuracyScore   Int?
+  tajwidScore     Int?
+  fluencyScore    Int?
+  
+  // AI Feedback
+  feedbackSummary String    @db.Text
+  feedbackCorrections Json?
+  feedbackTips    Json?
+  
+  attemptNumber   Int       @default(1)
+  
+  // Soft Delete
+  deletedAt       DateTime?
+  
+  createdAt       DateTime  @default(now())
+  
+  @@index([userId, itemId])
+  @@index([userId, createdAt])
+  @@index([deletedAt])
+}
+
+model HafalanProgress {
+  id              String    @id @default(cuid())
+  
+  userId          String
+  user            User      @relation(fields: [userId], references: [id])
+  itemId          String
+  item            HafalanItem @relation(fields: [itemId], references: [id])
+  itemType        HafalanType
+  
+  status          HafalanStatus @default(NOT_STARTED)
+  canProceed      Boolean   @default(false)
+  
+  bestScore       Int       @default(0)
+  totalAttempts   Int       @default(0)
+  
+  lastAttemptAt   DateTime?
+  firstPassedAt   DateTime?
+  
+  // Soft Delete
+  deletedAt       DateTime?
+  
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  
+  @@unique([userId, itemId])
+  @@index([userId, status])
+  @@index([deletedAt])
+}
+
+enum HafalanType {
+  QURAN
+  HADITS
+  MATAN
+}
+
+enum SubmissionMode {
+  WITH_TEXT
+  BLIND
+}
+
+enum HafalanStatus {
+  NOT_STARTED
+  IN_PROGRESS
+  PASSED
+}
+
+// ==================== DONATIONS ====================
+
+model Donation {
+  id              String    @id @default(cuid())
+  
+  userId          String?
+  user            User?     @relation(fields: [userId], references: [id])
+  
+  amount          Int
+  tier            Tier?
+  
+  donorName       String?
+  donorEmail      String?
+  isAnonymous     Boolean   @default(false)
+  message         String?
+  
+  paymentMethod   String?
+  paymentStatus   PaymentStatus @default(PENDING)
+  transactionId   String?   @unique
+  paidAt          DateTime?
+  
+  // Soft Delete
+  deletedAt       DateTime?
+  deletedBy       String?
+  deleteReason    String?
+  
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  
+  @@index([userId])
+  @@index([deletedAt])
+}
+
+enum PaymentStatus {
+  PENDING
+  COMPLETED
+  FAILED
+  REFUNDED
+}
