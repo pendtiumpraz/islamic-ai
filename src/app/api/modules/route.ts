@@ -1,15 +1,19 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
     const session = await getSession();
     const userTier = session?.user?.tier || "FREE";
+    
+    const { searchParams } = new URL(request.url);
+    const slug = searchParams.get("slug");
 
     const modules = await prisma.aIModule.findMany({
       where: {
         isActive: true,
+        ...(slug && { slug }),
       },
       orderBy: [
         { category: "asc" },
@@ -38,7 +42,7 @@ export async function GET() {
 
     return NextResponse.json({
       success: true,
-      data: modulesWithAccess,
+      modules: modulesWithAccess,
     });
   } catch (error) {
     console.error("Error fetching modules:", error);
