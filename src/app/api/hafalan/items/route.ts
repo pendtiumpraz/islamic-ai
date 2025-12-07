@@ -8,12 +8,17 @@ export async function GET(request: NextRequest) {
     const session = await getSession();
     const searchParams = request.nextUrl.searchParams;
     
+    const id = searchParams.get("id");
     const type = searchParams.get("type"); // quran, hadits, matan
     const surah = searchParams.get("surah");
     const page = parseInt(searchParams.get("page") || "1");
-    const limit = parseInt(searchParams.get("limit") || "20");
+    const limit = parseInt(searchParams.get("limit") || "50");
 
     const where: Record<string, unknown> = {};
+    
+    if (id) {
+      where.id = id;
+    }
     
     if (type) {
       where.type = type.toUpperCase();
@@ -44,6 +49,7 @@ export async function GET(request: NextRequest) {
           surahNumber: true,
           ayahStart: true,
           ayahEnd: true,
+          haditsNumber: true,
           orderIndex: true,
         },
       }),
@@ -69,9 +75,31 @@ export async function GET(request: NextRequest) {
       }));
     }
 
+    // Also get submissions if specific item requested
+    let submissions: unknown[] = [];
+    if (id && session?.user?.id) {
+      submissions = await prisma.hafalanSubmission.findMany({
+        where: {
+          userId: session.user.id,
+          itemId: id,
+          deletedAt: null,
+        },
+        orderBy: { createdAt: "desc" },
+        take: 10,
+        select: {
+          id: true,
+          score: true,
+          passed: true,
+          feedbackSummary: true,
+          createdAt: true,
+        },
+      });
+    }
+
     return NextResponse.json({
       success: true,
-      data: itemsWithProgress,
+      items: itemsWithProgress,
+      submissions,
       pagination: {
         page,
         limit,
