@@ -1,17 +1,71 @@
 "use client";
 
 import { useSession } from "next-auth/react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { toast } from "@/components/ui/toaster";
+
+interface UserStats {
+  totalChats: number;
+  totalSubmissions: number;
+  hafalanPassed: number;
+  totalDonations: number;
+}
 
 export default function ProfilePage() {
-  const { data: session, status } = useSession();
+  const { data: session, status, update } = useSession();
   const [isEditing, setIsEditing] = useState(false);
   const [name, setName] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [stats, setStats] = useState<UserStats>({ totalChats: 0, totalSubmissions: 0, hafalanPassed: 0, totalDonations: 0 });
+
+  useEffect(() => {
+    fetch("/api/user/profile")
+      .then(res => res.json())
+      .then(data => {
+        if (data.stats) setStats(data.stats);
+      })
+      .catch(() => {});
+  }, []);
+
+  const handleSave = async () => {
+    if (!name.trim()) return;
+    setSaving(true);
+    try {
+      const res = await fetch("/api/user/profile", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: name.trim() })
+      });
+      if (res.ok) {
+        toast({ title: "Profil berhasil diperbarui", type: "success" });
+        await update({ name: name.trim() });
+        setIsEditing(false);
+      } else {
+        toast({ title: "Gagal memperbarui profil", type: "error" });
+      }
+    } catch {
+      toast({ title: "Terjadi kesalahan", type: "error" });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleDeleteAccount = async () => {
+    if (!confirm("Apakah Anda yakin ingin menghapus akun? Akun akan dihapus permanen setelah 30 hari.")) return;
+    try {
+      const res = await fetch("/api/user/profile", { method: "DELETE" });
+      if (res.ok) {
+        toast({ title: "Akun ditandai untuk dihapus", description: "Akan dihapus permanen dalam 30 hari", type: "warning" });
+      }
+    } catch {
+      toast({ title: "Gagal menghapus akun", type: "error" });
+    }
+  };
 
   if (status === "loading") {
     return (
@@ -23,7 +77,7 @@ export default function ProfilePage() {
 
   const user = session?.user;
 
-  const tierInfo = {
+  const tierInfo: Record<string, { label: string; color: string; benefits: string[] }> = {
     FREE: { label: "Free", color: "bg-gray-500", benefits: ["10 chat/hari", "5 setoran/hari", "Juz 30"] },
     BRONZE: { label: "Bronze", color: "bg-amber-600", benefits: ["30 chat/hari", "15 setoran/hari", "Juz 29-30"] },
     SILVER: { label: "Silver", color: "bg-slate-500", benefits: ["100 chat/hari", "50 setoran/hari", "Juz 26-30"] },
@@ -35,7 +89,6 @@ export default function ProfilePage() {
 
   return (
     <div className="p-6 lg:p-8 max-w-4xl mx-auto">
-      {/* Header */}
       <div className="mb-8">
         <h1 className="text-2xl md:text-3xl font-bold text-gray-900">Profil Saya</h1>
         <p className="text-gray-600 mt-1">Kelola informasi akun Anda</p>
@@ -83,66 +136,34 @@ export default function ProfilePage() {
             <Button 
               variant={isEditing ? "default" : "outline"} 
               size="sm"
+              disabled={saving}
               onClick={() => {
                 if (isEditing) {
-                  // Save logic here
-                  setIsEditing(false);
+                  handleSave();
                 } else {
                   setName(user?.name || "");
                   setIsEditing(true);
                 }
               }}
             >
-              {isEditing ? "Simpan" : "Edit"}
+              {saving ? "Menyimpan..." : isEditing ? "Simpan" : "Edit"}
             </Button>
           </CardHeader>
           <CardContent>
             <div className="grid gap-4">
               <div className="grid md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Nama Lengkap
-                  </label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Nama Lengkap</label>
                   {isEditing ? (
-                    <Input 
-                      value={name} 
-                      onChange={(e) => setName(e.target.value)}
-                      className="bg-white"
-                    />
+                    <Input value={name} onChange={(e) => setName(e.target.value)} className="bg-white" />
                   ) : (
                     <p className="text-gray-900 py-2">{user?.name}</p>
                   )}
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Email
-                  </label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Email</label>
                   <p className="text-gray-900 py-2">{user?.email}</p>
-                  <p className="text-xs text-gray-500 mt-1">
-                    Email tidak dapat diubah (terhubung dengan Google)
-                  </p>
-                </div>
-              </div>
-              <div className="grid md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Bergabung Sejak
-                  </label>
-                  <p className="text-gray-900 py-2">
-                    {new Date().toLocaleDateString("id-ID", {
-                      day: "numeric",
-                      month: "long",
-                      year: "numeric"
-                    })}
-                  </p>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    ID Pengguna
-                  </label>
-                  <p className="text-gray-500 py-2 font-mono text-sm">
-                    {user?.id?.slice(0, 8)}...
-                  </p>
+                  <p className="text-xs text-gray-500 mt-1">Email tidak dapat diubah (terhubung dengan Google)</p>
                 </div>
               </div>
             </div>
@@ -162,15 +183,8 @@ export default function ProfilePage() {
               user?.tier === "BRONZE" ? "bg-gradient-to-br from-amber-50 to-orange-100" :
               "bg-gradient-to-br from-gray-50 to-gray-100"
             }`}>
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center gap-3">
-                  <Badge className={`${currentTier.color} text-white text-lg px-4 py-1`}>
-                    {currentTier.label}
-                  </Badge>
-                  {user?.tier !== "FREE" && (
-                    <span className="text-sm text-gray-500">Donatur</span>
-                  )}
-                </div>
+              <div className="flex items-center gap-3 mb-4">
+                <Badge className={`${currentTier.color} text-white text-lg px-4 py-1`}>{currentTier.label}</Badge>
               </div>
               <div className="space-y-2">
                 <p className="text-sm font-medium text-gray-700 mb-2">Benefit Anda:</p>
@@ -181,16 +195,6 @@ export default function ProfilePage() {
                   </div>
                 ))}
               </div>
-              {user?.tier === "FREE" && (
-                <div className="mt-6 pt-4 border-t border-gray-200">
-                  <p className="text-sm text-gray-600 mb-3">
-                    Upgrade untuk akses lebih banyak fitur dan bantu pembangunan pusat Islam.
-                  </p>
-                  <Button className="bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600">
-                    Lihat Paket Donasi
-                  </Button>
-                </div>
-              )}
             </div>
           </CardContent>
         </Card>
@@ -204,20 +208,20 @@ export default function ProfilePage() {
           <CardContent>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <div className="p-4 bg-emerald-50 rounded-xl text-center">
-                <p className="text-3xl font-bold text-emerald-600">0</p>
+                <p className="text-3xl font-bold text-emerald-600">{stats.totalChats}</p>
                 <p className="text-sm text-gray-600 mt-1">Total Chat</p>
               </div>
               <div className="p-4 bg-blue-50 rounded-xl text-center">
-                <p className="text-3xl font-bold text-blue-600">0</p>
+                <p className="text-3xl font-bold text-blue-600">{stats.totalSubmissions}</p>
                 <p className="text-sm text-gray-600 mt-1">Total Setoran</p>
               </div>
               <div className="p-4 bg-purple-50 rounded-xl text-center">
-                <p className="text-3xl font-bold text-purple-600">0</p>
+                <p className="text-3xl font-bold text-purple-600">{stats.hafalanPassed}</p>
                 <p className="text-sm text-gray-600 mt-1">Hafalan Lulus</p>
               </div>
               <div className="p-4 bg-amber-50 rounded-xl text-center">
-                <p className="text-3xl font-bold text-amber-600">0</p>
-                <p className="text-sm text-gray-600 mt-1">Hari Streak</p>
+                <p className="text-3xl font-bold text-amber-600">{stats.totalDonations}</p>
+                <p className="text-sm text-gray-600 mt-1">Donasi</p>
               </div>
             </div>
           </CardContent>
@@ -233,11 +237,9 @@ export default function ProfilePage() {
             <div className="flex items-center justify-between p-4 bg-red-50 rounded-xl">
               <div>
                 <p className="font-medium text-red-800">Hapus Akun</p>
-                <p className="text-sm text-red-600">
-                  Semua data akan dihapus permanen setelah 30 hari
-                </p>
+                <p className="text-sm text-red-600">Semua data akan dihapus permanen setelah 30 hari</p>
               </div>
-              <Button variant="outline" className="border-red-300 text-red-600 hover:bg-red-50">
+              <Button variant="outline" className="border-red-300 text-red-600 hover:bg-red-50" onClick={handleDeleteAccount}>
                 Hapus Akun
               </Button>
             </div>

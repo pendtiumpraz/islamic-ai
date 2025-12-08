@@ -4,9 +4,11 @@ import { useSession } from "next-auth/react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { toast } from "@/components/ui/toaster";
 
 export default function SettingsPage() {
   const { status } = useSession();
+  const [saving, setSaving] = useState(false);
   const [notifications, setNotifications] = useState({
     dailyReminder: true,
     weeklyProgress: true,
@@ -17,7 +19,66 @@ export default function SettingsPage() {
     language: "id",
     theme: "light",
     fontSize: "medium",
+    madzhab: "syafii",
+    responseStyle: "balanced",
   });
+
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      const res = await fetch("/api/user/settings", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          language: preferences.language.toUpperCase(),
+        })
+      });
+      if (res.ok) {
+        toast({ title: "Pengaturan berhasil disimpan", type: "success" });
+      } else {
+        toast({ title: "Gagal menyimpan pengaturan", type: "error" });
+      }
+    } catch {
+      toast({ title: "Terjadi kesalahan", type: "error" });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleDeleteData = async (type: "chat" | "hafalan") => {
+    const label = type === "chat" ? "riwayat chat" : "riwayat hafalan";
+    if (!confirm(`Hapus semua ${label}? Tindakan ini tidak dapat dibatalkan.`)) return;
+    
+    try {
+      const res = await fetch(`/api/user/data?type=${type}`, { method: "DELETE" });
+      if (res.ok) {
+        toast({ title: `${label.charAt(0).toUpperCase() + label.slice(1)} berhasil dihapus`, type: "success" });
+      } else {
+        toast({ title: `Gagal menghapus ${label}`, type: "error" });
+      }
+    } catch {
+      toast({ title: "Terjadi kesalahan", type: "error" });
+    }
+  };
+
+  const handleExportData = async () => {
+    try {
+      const res = await fetch("/api/user/data");
+      if (res.ok) {
+        const data = await res.json();
+        const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `ilmuna-data-${new Date().toISOString().split("T")[0]}.json`;
+        a.click();
+        URL.revokeObjectURL(url);
+        toast({ title: "Data berhasil diunduh", type: "success" });
+      }
+    } catch {
+      toast({ title: "Gagal mengunduh data", type: "error" });
+    }
+  };
 
   if (status === "loading") {
     return (
@@ -29,7 +90,6 @@ export default function SettingsPage() {
 
   return (
     <div className="p-6 lg:p-8 max-w-4xl mx-auto">
-      {/* Header */}
       <div className="mb-8">
         <h1 className="text-2xl md:text-3xl font-bold text-gray-900">Pengaturan</h1>
         <p className="text-gray-600 mt-1">Sesuaikan pengalaman ILMUNA Anda</p>
@@ -39,83 +99,34 @@ export default function SettingsPage() {
         {/* Notification Settings */}
         <Card className="border-0 shadow-md">
           <CardHeader>
-            <CardTitle className="text-lg">🔔 Notifikasi</CardTitle>
+            <CardTitle className="text-lg">Notifikasi</CardTitle>
             <CardDescription>Kelola notifikasi yang Anda terima</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              <div className="flex items-center justify-between py-3 border-b">
-                <div>
-                  <p className="font-medium text-gray-900">Pengingat Harian</p>
-                  <p className="text-sm text-gray-500">Ingatkan untuk belajar setiap hari</p>
-                </div>
-                <button
-                  onClick={() => setNotifications(prev => ({ ...prev, dailyReminder: !prev.dailyReminder }))}
-                  className={`relative w-12 h-6 rounded-full transition-colors ${
-                    notifications.dailyReminder ? "bg-emerald-500" : "bg-gray-300"
-                  }`}
-                >
-                  <span
-                    className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full transition-transform ${
-                      notifications.dailyReminder ? "translate-x-6" : ""
+              {[
+                { key: "dailyReminder", label: "Pengingat Harian", desc: "Ingatkan untuk belajar setiap hari" },
+                { key: "weeklyProgress", label: "Laporan Mingguan", desc: "Ringkasan progress setiap minggu" },
+                { key: "newFeatures", label: "Fitur Baru", desc: "Info tentang fitur dan pembaruan" },
+                { key: "promotions", label: "Promosi", desc: "Info tentang promo dan diskon donasi" },
+              ].map((item, idx) => (
+                <div key={item.key} className={`flex items-center justify-between py-3 ${idx < 3 ? "border-b" : ""}`}>
+                  <div>
+                    <p className="font-medium text-gray-900">{item.label}</p>
+                    <p className="text-sm text-gray-500">{item.desc}</p>
+                  </div>
+                  <button
+                    onClick={() => setNotifications(prev => ({ ...prev, [item.key]: !prev[item.key as keyof typeof prev] }))}
+                    className={`relative w-12 h-6 rounded-full transition-colors ${
+                      notifications[item.key as keyof typeof notifications] ? "bg-emerald-500" : "bg-gray-300"
                     }`}
-                  />
-                </button>
-              </div>
-              <div className="flex items-center justify-between py-3 border-b">
-                <div>
-                  <p className="font-medium text-gray-900">Laporan Mingguan</p>
-                  <p className="text-sm text-gray-500">Ringkasan progress setiap minggu</p>
+                  >
+                    <span className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full transition-transform ${
+                      notifications[item.key as keyof typeof notifications] ? "translate-x-6" : ""
+                    }`} />
+                  </button>
                 </div>
-                <button
-                  onClick={() => setNotifications(prev => ({ ...prev, weeklyProgress: !prev.weeklyProgress }))}
-                  className={`relative w-12 h-6 rounded-full transition-colors ${
-                    notifications.weeklyProgress ? "bg-emerald-500" : "bg-gray-300"
-                  }`}
-                >
-                  <span
-                    className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full transition-transform ${
-                      notifications.weeklyProgress ? "translate-x-6" : ""
-                    }`}
-                  />
-                </button>
-              </div>
-              <div className="flex items-center justify-between py-3 border-b">
-                <div>
-                  <p className="font-medium text-gray-900">Fitur Baru</p>
-                  <p className="text-sm text-gray-500">Info tentang fitur dan pembaruan</p>
-                </div>
-                <button
-                  onClick={() => setNotifications(prev => ({ ...prev, newFeatures: !prev.newFeatures }))}
-                  className={`relative w-12 h-6 rounded-full transition-colors ${
-                    notifications.newFeatures ? "bg-emerald-500" : "bg-gray-300"
-                  }`}
-                >
-                  <span
-                    className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full transition-transform ${
-                      notifications.newFeatures ? "translate-x-6" : ""
-                    }`}
-                  />
-                </button>
-              </div>
-              <div className="flex items-center justify-between py-3">
-                <div>
-                  <p className="font-medium text-gray-900">Promosi</p>
-                  <p className="text-sm text-gray-500">Info tentang promo dan diskon donasi</p>
-                </div>
-                <button
-                  onClick={() => setNotifications(prev => ({ ...prev, promotions: !prev.promotions }))}
-                  className={`relative w-12 h-6 rounded-full transition-colors ${
-                    notifications.promotions ? "bg-emerald-500" : "bg-gray-300"
-                  }`}
-                >
-                  <span
-                    className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full transition-transform ${
-                      notifications.promotions ? "translate-x-6" : ""
-                    }`}
-                  />
-                </button>
-              </div>
+              ))}
             </div>
           </CardContent>
         </Card>
@@ -123,21 +134,18 @@ export default function SettingsPage() {
         {/* Display Settings */}
         <Card className="border-0 shadow-md">
           <CardHeader>
-            <CardTitle className="text-lg">🎨 Tampilan</CardTitle>
+            <CardTitle className="text-lg">Tampilan</CardTitle>
             <CardDescription>Sesuaikan tampilan aplikasi</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-6">
-              {/* Language */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-3">
-                  Bahasa
-                </label>
-                <div className="flex gap-3">
+                <label className="block text-sm font-medium text-gray-700 mb-3">Bahasa</label>
+                <div className="flex gap-3 flex-wrap">
                   {[
-                    { value: "id", label: "🇮🇩 Indonesia" },
-                    { value: "ar", label: "🇸🇦 العربية" },
-                    { value: "en", label: "🇬🇧 English" },
+                    { value: "id", label: "Indonesia" },
+                    { value: "ar", label: "العربية" },
+                    { value: "en", label: "English" },
                   ].map((lang) => (
                     <button
                       key={lang.value}
@@ -154,16 +162,13 @@ export default function SettingsPage() {
                 </div>
               </div>
 
-              {/* Theme */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-3">
-                  Tema
-                </label>
-                <div className="flex gap-3">
+                <label className="block text-sm font-medium text-gray-700 mb-3">Tema</label>
+                <div className="flex gap-3 flex-wrap">
                   {[
-                    { value: "light", label: "☀️ Terang", bg: "bg-white" },
-                    { value: "dark", label: "🌙 Gelap", bg: "bg-gray-800" },
-                    { value: "system", label: "💻 Sistem", bg: "bg-gradient-to-r from-white to-gray-800" },
+                    { value: "light", label: "Terang" },
+                    { value: "dark", label: "Gelap" },
+                    { value: "system", label: "Sistem" },
                   ].map((theme) => (
                     <button
                       key={theme.value}
@@ -178,16 +183,11 @@ export default function SettingsPage() {
                     </button>
                   ))}
                 </div>
-                <p className="text-xs text-gray-500 mt-2">
-                  Mode gelap akan segera tersedia
-                </p>
+                <p className="text-xs text-gray-500 mt-2">Mode gelap akan segera tersedia</p>
               </div>
 
-              {/* Font Size */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-3">
-                  Ukuran Teks
-                </label>
+                <label className="block text-sm font-medium text-gray-700 mb-3">Ukuran Teks</label>
                 <div className="flex gap-3">
                   {[
                     { value: "small", label: "Kecil" },
@@ -215,16 +215,13 @@ export default function SettingsPage() {
         {/* AI Settings */}
         <Card className="border-0 shadow-md">
           <CardHeader>
-            <CardTitle className="text-lg">🤖 Pengaturan AI</CardTitle>
+            <CardTitle className="text-lg">Pengaturan AI</CardTitle>
             <CardDescription>Sesuaikan perilaku AI assistant</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-6">
-              {/* Response Style */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-3">
-                  Gaya Jawaban
-                </label>
+                <label className="block text-sm font-medium text-gray-700 mb-3">Gaya Jawaban</label>
                 <div className="grid grid-cols-3 gap-3">
                   {[
                     { value: "concise", label: "Ringkas", desc: "Jawaban singkat" },
@@ -233,8 +230,9 @@ export default function SettingsPage() {
                   ].map((style) => (
                     <button
                       key={style.value}
+                      onClick={() => setPreferences(prev => ({ ...prev, responseStyle: style.value }))}
                       className={`p-4 rounded-xl border-2 text-left transition-all ${
-                        style.value === "balanced"
+                        preferences.responseStyle === style.value
                           ? "border-emerald-500 bg-emerald-50"
                           : "border-gray-200 hover:border-gray-300"
                       }`}
@@ -246,28 +244,29 @@ export default function SettingsPage() {
                 </div>
               </div>
 
-              {/* Madzhab Preference */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-3">
-                  Preferensi Madzhab (untuk Fiqih)
-                </label>
+                <label className="block text-sm font-medium text-gray-700 mb-3">Preferensi Madzhab</label>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                  {["Syafi'i", "Hanafi", "Maliki", "Hanbali"].map((madzhab) => (
+                  {[
+                    { value: "syafii", label: "Syafi'i" },
+                    { value: "hanafi", label: "Hanafi" },
+                    { value: "maliki", label: "Maliki" },
+                    { value: "hanbali", label: "Hanbali" },
+                  ].map((madzhab) => (
                     <button
-                      key={madzhab}
+                      key={madzhab.value}
+                      onClick={() => setPreferences(prev => ({ ...prev, madzhab: madzhab.value }))}
                       className={`p-3 rounded-xl border-2 text-center transition-all ${
-                        madzhab === "Syafi'i"
+                        preferences.madzhab === madzhab.value
                           ? "border-emerald-500 bg-emerald-50 text-emerald-700"
                           : "border-gray-200 hover:border-gray-300"
                       }`}
                     >
-                      {madzhab}
+                      {madzhab.label}
                     </button>
                   ))}
                 </div>
-                <p className="text-xs text-gray-500 mt-2">
-                  AI akan memprioritaskan pendapat madzhab pilihan Anda
-                </p>
+                <p className="text-xs text-gray-500 mt-2">AI akan memprioritaskan pendapat madzhab pilihan Anda</p>
               </div>
             </div>
           </CardContent>
@@ -276,7 +275,7 @@ export default function SettingsPage() {
         {/* Data & Privacy */}
         <Card className="border-0 shadow-md">
           <CardHeader>
-            <CardTitle className="text-lg">🔒 Data & Privasi</CardTitle>
+            <CardTitle className="text-lg">Data & Privasi</CardTitle>
             <CardDescription>Kelola data dan privasi Anda</CardDescription>
           </CardHeader>
           <CardContent>
@@ -286,16 +285,14 @@ export default function SettingsPage() {
                   <p className="font-medium text-gray-900">Unduh Data Saya</p>
                   <p className="text-sm text-gray-500">Dapatkan salinan semua data Anda</p>
                 </div>
-                <Button variant="outline" size="sm">
-                  Unduh
-                </Button>
+                <Button variant="outline" size="sm" onClick={handleExportData}>Unduh</Button>
               </div>
               <div className="flex items-center justify-between py-3 border-b">
                 <div>
                   <p className="font-medium text-gray-900">Hapus Riwayat Chat</p>
                   <p className="text-sm text-gray-500">Hapus semua percakapan dengan AI</p>
                 </div>
-                <Button variant="outline" size="sm" className="text-red-600 hover:bg-red-50">
+                <Button variant="outline" size="sm" className="text-red-600 hover:bg-red-50" onClick={() => handleDeleteData("chat")}>
                   Hapus
                 </Button>
               </div>
@@ -304,7 +301,7 @@ export default function SettingsPage() {
                   <p className="font-medium text-gray-900">Hapus Riwayat Hafalan</p>
                   <p className="text-sm text-gray-500">Hapus semua riwayat setoran</p>
                 </div>
-                <Button variant="outline" size="sm" className="text-red-600 hover:bg-red-50">
+                <Button variant="outline" size="sm" className="text-red-600 hover:bg-red-50" onClick={() => handleDeleteData("hafalan")}>
                   Hapus
                 </Button>
               </div>
@@ -315,8 +312,12 @@ export default function SettingsPage() {
         {/* Save Button */}
         <div className="flex justify-end gap-3">
           <Button variant="outline">Batal</Button>
-          <Button className="bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600">
-            Simpan Perubahan
+          <Button 
+            className="bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600"
+            onClick={handleSave}
+            disabled={saving}
+          >
+            {saving ? "Menyimpan..." : "Simpan Perubahan"}
           </Button>
         </div>
       </div>
