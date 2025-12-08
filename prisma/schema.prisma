@@ -16,6 +16,7 @@ model User {
   image           String?
   googleId        String?   @unique
   
+  role            Role      @default(USER)
   tier            Tier      @default(FREE)
   totalDonation   Int       @default(0)
   preferredLang   Language  @default(ID)
@@ -89,6 +90,12 @@ enum Tier {
   SILVER
   GOLD
   PATRON
+}
+
+enum Role {
+  USER
+  ADMIN
+  SUPER_ADMIN
 }
 
 enum Language {
