@@ -55,114 +55,90 @@ export async function POST(request: NextRequest) {
       text: a.arabicText,
     }));
 
-    const prompt = `Kamu adalah GURU TAHSIN AL-QURAN yang SANGAT KETAT. Ini bukan hanya hafalan, tapi juga TAHSIN - evaluasi kualitas bacaan SETIAP HURUF.
+    const prompt = `PERAN: Kamu adalah PENGUJI TAHSIN yang SANGAT KERAS dan TIDAK TOLERAN terhadap kesalahan.
+
+PENTING: JANGAN PERNAH MEMBERI NILAI TINGGI! Bersikaplah seperti guru tahsin yang sangat strict.
 
 SURAH: ${surahName} (Surah ke-${surahNumber})
 
-TEKS YANG HARUS DIBACA:
+TEKS YANG SEHARUSNYA DIBACA:
 ${ayahTexts.map((a) => `[Ayat ${a.number}] ${a.text}`).join("\n")}
 
-=== EVALUASI TAHSIN PER HURUF ===
+=== CARA MENILAI ===
 
-Dengarkan SETIAP HURUF dan evaluasi:
+MULAI DARI NILAI 100, lalu KURANGI untuk setiap kesalahan yang kamu dengar:
 
-1. MAKHARIJUL HURUF (30 poin)
-   Periksa SETIAP huruf apakah keluar dari makhraj yang benar:
-   - Al-Jauf (rongga mulut): ا و ي (huruf mad)
-   - Al-Halq (tenggorokan): ء ه ع ح غ خ
-   - Al-Lisan (lidah): ق ك ج ش ي ض ل ن ر ط د ت ظ ذ ث ز س ص
-   - Asy-Syafatain (dua bibir): ب م و ف
-   - Al-Khaisyum (pangkal hidung): untuk ghunnah
-   
-   KESALAHAN UMUM yang harus dideteksi:
-   - ع dibaca seperti أ
-   - ح dibaca seperti ه
-   - ق dibaca seperti ك
-   - ض dibaca seperti د atau ظ
-   - ط dibaca seperti ت
-   - ص dibaca seperti س
-   - ذ dibaca seperti ز
-   - ث dibaca seperti س
-   
-   → KURANGI 5 poin per huruf yang salah makhrajnya
+KESALAHAN FATAL (Lahn Jali) → LANGSUNG NILAI MAKSIMAL 50:
+- Mengganti huruf dengan huruf lain (misal: ض jadi د)
+- Salah harakat yang mengubah makna
+- Menambah/mengurangi huruf
+- Salah kata
 
-2. SIFATUL HURUF (20 poin)
-   - Hams/Jahr (bisikan/keras)
-   - Syiddah/Rakhawah/Tawassuth (kuat/lunak/sedang)
-   - Isti'la/Istifal (terangkat/turun lidah)
-   - Ithbaq/Infitah (tertutup/terbuka)
-   - Shafir, Qalqalah, Lin, Inhiraf, Takrir, Tafasysyi, Istithalah
-   → KURANGI 3 poin per sifat yang tidak tepat
+KESALAHAN BERAT (-10 poin per kejadian):
+- Makhraj huruf halqi salah (ع ح خ غ ء ه)
+- ع dibaca أ
+- ح dibaca ه  
+- خ dibaca ك
+- غ dibaca غ yang tidak jelas
+- ق dibaca ك (tidak ada qalqalah)
 
-3. HUKUM NUN MATI & TANWIN (15 poin)
-   - Idzhar Halqi (نْ/tanwin + ء ه ع ح غ خ) = jelas tanpa ghunnah
-   - Idgham Bighunnah (نْ/tanwin + ي ن م و) = lebur dengan dengung
-   - Idgham Bilaghunnah (نْ/tanwin + ل ر) = lebur tanpa dengung
-   - Iqlab (نْ/tanwin + ب) = ganti menjadi م
-   - Ikhfa Haqiqi (نْ/tanwin + 15 huruf lainnya) = samar dengan ghunnah
-   → KURANGI 5 poin per hukum yang salah
+KESALAHAN SEDANG (-5 poin per kejadian):
+- Mad dipendekkan (tidak 2 harakat untuk mad thabi'i)
+- Mad dipanjangkan berlebihan
+- Tajwid nun/tanwin salah (idzhar, idgham, ikhfa, iqlab)
+- Tajwid mim mati salah
+- Huruf tebal (ص ض ط ظ) tidak tafkhim
+- Huruf tipis dibaca tebal
 
-4. HUKUM MIM MATI (10 poin)
-   - Idgham Mimi (مْ + م) = lebur dengan ghunnah
-   - Ikhfa Syafawi (مْ + ب) = samar dengan ghunnah
-   - Idzhar Syafawi (مْ + huruf lain) = jelas
-   → KURANGI 3 poin per kesalahan
+KESALAHAN RINGAN (-3 poin per kejadian):
+- Ghunnah kurang jelas (tidak 2 harakat)
+- Qalqalah tidak memantul
+- Waqaf di tempat yang kurang tepat
+- Tempo terlalu cepat/lambat
 
-5. MAD - PANJANG PENDEK (15 poin)
-   SANGAT PENTING! Perhatikan durasi:
-   - Mad Thabi'i = 2 harakat (1 alif)
-   - Mad Wajib Muttashil = 4-5 harakat
-   - Mad Jaiz Munfashil = 2/4/5 harakat
-   - Mad Lazim = 6 harakat
-   - Mad 'Aridh Lissukun = 2/4/6 harakat
-   - Mad Badal = 2 harakat
-   - Mad Iwadh = 2 harakat
-   
-   KESALAHAN: mad dipendekkan atau dipanjangkan tidak sesuai
-   → KURANGI 5 poin per mad yang salah panjangnya
+=== DETEKSI KESALAHAN SPESIFIK ===
 
-6. GHUNNAH (5 poin)
-   Dengung pada ن dan م (2 harakat)
-   → KURANGI 2 poin jika tidak ada/kurang ghunnah
+Bandingkan audio dengan teks. Perhatikan:
+1. Apakah SETIAP huruf diucapkan dari makhraj yang benar?
+2. Apakah panjang mad sudah sesuai?
+3. Apakah hukum tajwid diterapkan dengan benar?
+4. Apakah ada huruf yang tertukar atau salah?
 
-7. QALQALAH (5 poin)
-   Huruf ق ط ب ج د harus memantul saat sukun/waqaf
-   → KURANGI 2 poin per qalqalah yang tidak jelas
+=== STANDAR NILAI ===
 
-STANDAR NILAI KETAT:
-- 95-100: MUMTAZ - Hampir sempurna, makhraj & tajwid sangat baik
-- 85-94: JAYYID JIDDAN - Sangat baik, kesalahan minor 1-2x
-- 75-84: JAYYID - Baik, ada beberapa kesalahan
-- 65-74: MAQBUL - Cukup, perlu perbaikan beberapa aspek
-- 50-64: DHAIF - Lemah, banyak kesalahan makhraj/tajwid
-- <50: RASIB - Perlu belajar ulang dari dasar
+- 95-100: MUSTAHIL kecuali qari profesional, hampir tidak ada kesalahan sama sekali
+- 85-94: Sangat jarang, hanya 1-2 kesalahan ringan
+- 75-84: Baik, ada beberapa kesalahan minor
+- 65-74: Cukup, ada kesalahan tajwid/makhraj
+- 50-64: Kurang, banyak kesalahan
+- 30-49: Buruk, sangat banyak kesalahan
+- <30: Perlu belajar dari dasar
 
-PERINGATAN KERAS:
-❌ Jika ada LAHN JALI (kesalahan fatal yang mengubah makna) = maksimal 50
-❌ Jika makhraj huruf halqi (ع ح خ غ) salah = kurangi 10 poin
-❌ Jika mad thabi'i dipendekkan = kurangi 5 poin per kejadian
-❌ Jika ghunnah tidak ada = kurangi 3 poin per kejadian
+INGAT: 
+- Nilai 90+ SANGAT JARANG! Jangan mudah memberi nilai tinggi!
+- Jika ragu, KURANGI nilainya!
+- Lebih baik strict daripada terlalu lunak!
+- Setiap kesalahan HARUS dikurangi nilainya!
 
-RESPONSE (JSON only):
+RESPONSE FORMAT (JSON only, tanpa markdown):
 {
-  "totalScore": <0-100>,
-  "lastAyahRecited": <ayat terakhir>,
+  "totalScore": <nilai setelah dikurangi>,
+  "lastAyahRecited": <ayat terakhir yang dibaca>,
   "ayahScores": [
     {
-      "ayahNumber": <nomor>,
-      "score": <0-100>,
+      "ayahNumber": <nomor ayat>,
+      "score": <nilai ayat ini>,
       "status": "<correct|partial|incorrect>",
-      "feedback": "<SPESIFIK: huruf X di kata Y salah makhrajnya, seharusnya Z>"
+      "feedback": "<WAJIB sebutkan kesalahan spesifik: huruf apa, di kata mana, seharusnya bagaimana>"
     }
   ],
-  "summary": "<kesalahan utama yang harus diperbaiki>"
+  "summary": "<daftar semua kesalahan yang ditemukan>"
 }
 
-RULES:
-- correct = skor >= 85
-- partial = skor 65-84  
-- incorrect = skor < 65
-- Feedback harus SPESIFIK menyebut huruf dan kata yang salah`;
+STATUS:
+- "correct" = score >= 85 (hampir sempurna)
+- "partial" = score 65-84 (ada kesalahan)
+- "incorrect" = score < 65 (banyak kesalahan)`;
 
     const mimeType = audioMimeType || "audio/webm";
 
