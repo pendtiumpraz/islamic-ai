@@ -113,20 +113,30 @@ KESALAHAN RINGAN (-2 poin):
 - 50-64: Banyak kesalahan
 - <50: Ada lahn jali
 
+TUGAS UTAMA:
+1. Dengarkan audio dengan teliti
+2. Identifikasi ayat mana saja yang BENAR-BENAR dibaca
+3. HANYA beri nilai untuk ayat yang dibaca - JANGAN nilai ayat yang tidak dibaca!
+4. Jika hanya ayat 1 yang dibaca, hanya ayat 1 yang ada di ayahScores
+
 RESPONSE (JSON only):
 {
-  "totalScore": <nilai>,
-  "lastAyahRecited": <ayat terakhir>,
+  "totalScore": <rata-rata nilai ayat yang dibaca>,
+  "lastAyahRecited": <nomor ayat terakhir yang dibaca>,
   "ayahScores": [
+    // HANYA masukkan ayat yang BENAR-BENAR terdengar dibaca!
+    // Jika user hanya baca ayat 1, maka hanya ada 1 object di sini
     {
-      "ayahNumber": <nomor>,
+      "ayahNumber": <nomor ayat yang dibaca>,
       "score": <nilai>,
       "status": "<correct|partial|incorrect>",
-      "feedback": "<kosongkan jika tidak ada kesalahan, atau sebutkan kesalahan SPESIFIK yang terdengar>"
+      "feedback": "<kosongkan jika bagus, atau sebutkan kesalahan>"
     }
   ],
-  "summary": "<ringkasan: bagus/perlu perbaikan apa>"
+  "summary": "<ringkasan>"
 }
+
+PENTING: Jangan masukkan ayat yang TIDAK dibaca ke ayahScores!
 
 STATUS: correct >= 85, partial 65-84, incorrect < 65`;
 
