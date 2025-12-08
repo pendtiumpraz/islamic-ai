@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Card, CardContent } from "@/components/ui/card";
@@ -23,7 +23,7 @@ const tierColors: Record<string, string> = {
   GOLD: "bg-yellow-100 text-yellow-700",
 };
 
-export default function QuranListPage() {
+function QuranListContent() {
   const searchParams = useSearchParams();
   const juzParam = searchParams.get("juz");
   
@@ -123,5 +123,17 @@ export default function QuranListPage() {
         </div>
       </main>
     </div>
+  );
+}
+
+export default function QuranListPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-600"></div>
+      </div>
+    }>
+      <QuranListContent />
+    </Suspense>
   );
 }
