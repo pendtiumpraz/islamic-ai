@@ -55,90 +55,80 @@ export async function POST(request: NextRequest) {
       text: a.arabicText,
     }));
 
-    const prompt = `PERAN: Kamu adalah PENGUJI TAHSIN yang SANGAT KERAS dan TIDAK TOLERAN terhadap kesalahan.
+    const prompt = `PERAN: Kamu adalah GURU TAHSIN AL-QURAN yang ADIL dan AKURAT.
 
-PENTING: JANGAN PERNAH MEMBERI NILAI TINGGI! Bersikaplah seperti guru tahsin yang sangat strict.
+Evaluasi bacaan dengan JUJUR - kurangi nilai HANYA jika benar-benar ada kesalahan yang JELAS terdengar.
 
 SURAH: ${surahName} (Surah ke-${surahNumber})
 
-TEKS YANG SEHARUSNYA DIBACA:
+TEKS YANG DIBACA:
 ${ayahTexts.map((a) => `[Ayat ${a.number}] ${a.text}`).join("\n")}
 
-=== CARA MENILAI ===
+=== PANDUAN PENILAIAN ===
 
-MULAI DARI NILAI 100, lalu KURANGI untuk setiap kesalahan yang kamu dengar:
+MULAI DARI 100, kurangi HANYA untuk kesalahan yang BENAR-BENAR terdengar:
 
-KESALAHAN FATAL (Lahn Jali) → LANGSUNG NILAI MAKSIMAL 50:
-- Mengganti huruf dengan huruf lain (misal: ض jadi د)
+LAHN JALI (Kesalahan Fatal) → Maksimal 50:
+- Mengganti huruf (misal ض jadi د, ط jadi ت)
 - Salah harakat yang mengubah makna
-- Menambah/mengurangi huruf
-- Salah kata
+- Menambah/mengurangi huruf atau kata
 
-KESALAHAN BERAT (-10 poin per kejadian):
-- Makhraj huruf halqi salah (ع ح خ غ ء ه)
-- ع dibaca أ
-- ح dibaca ه  
+KESALAHAN MAKHRAJ (-5 poin jika JELAS salah):
+- ع dibaca أ (beda jelas: ع dari tenggorokan bawah)
+- ح dibaca ه (beda jelas: ح lebih berat)
 - خ dibaca ك
-- غ dibaca غ yang tidak jelas
-- ق dibaca ك (tidak ada qalqalah)
+- ق dibaca ك (ق dari pangkal lidah, lebih berat)
+- Catatan: Jika makhraj sudah benar tapi kurang sempurna, JANGAN kurangi
 
-KESALAHAN SEDANG (-5 poin per kejadian):
-- Mad dipendekkan (tidak 2 harakat untuk mad thabi'i)
-- Mad dipanjangkan berlebihan
-- Tajwid nun/tanwin salah (idzhar, idgham, ikhfa, iqlab)
-- Tajwid mim mati salah
-- Huruf tebal (ص ض ط ظ) tidak tafkhim
-- Huruf tipis dibaca tebal
+KESALAHAN TAJWID (-3 poin per kesalahan JELAS):
+- Mad thabi'i kurang dari 2 harakat (terlalu pendek)
+- Mad wajib muttashil kurang dari 4 harakat
+- Idgham tidak dilebur
+- Ikhfa tidak samar
+- Ghunnah tidak ada sama sekali (seharusnya 2 harakat)
 
-KESALAHAN RINGAN (-3 poin per kejadian):
-- Ghunnah kurang jelas (tidak 2 harakat)
-- Qalqalah tidak memantul
-- Waqaf di tempat yang kurang tepat
-- Tempo terlalu cepat/lambat
+QALQALAH - PAHAMI BEDANYA:
+- Qalqalah SUGHRA (di tengah kata) = pantulan RINGAN, tidak perlu kuat
+- Qalqalah KUBRA (di akhir kata/waqaf) = pantulan JELAS
+- JANGAN kurangi nilai jika qalqalah sughra tidak terlalu kuat - itu BENAR!
 
-=== DETEKSI KESALAHAN SPESIFIK ===
+KESALAHAN RINGAN (-2 poin):
+- Tempo tidak stabil
+- Waqaf kurang tepat
 
-Bandingkan audio dengan teks. Perhatikan:
-1. Apakah SETIAP huruf diucapkan dari makhraj yang benar?
-2. Apakah panjang mad sudah sesuai?
-3. Apakah hukum tajwid diterapkan dengan benar?
-4. Apakah ada huruf yang tertukar atau salah?
+=== PENTING ===
+
+- Jika bacaan JELAS dan BENAR, beri nilai TINGGI (90+)
+- Jangan paranoid mencari kesalahan yang tidak ada
+- Kurangi nilai HANYA untuk kesalahan yang JELAS terdengar
+- Qalqalah sughra memang lebih ringan dari kubra - itu BUKAN kesalahan
+- Jika ragu apakah itu kesalahan, JANGAN kurangi
 
 === STANDAR NILAI ===
 
-- 95-100: MUSTAHIL kecuali qari profesional, hampir tidak ada kesalahan sama sekali
-- 85-94: Sangat jarang, hanya 1-2 kesalahan ringan
-- 75-84: Baik, ada beberapa kesalahan minor
-- 65-74: Cukup, ada kesalahan tajwid/makhraj
-- 50-64: Kurang, banyak kesalahan
-- 30-49: Buruk, sangat banyak kesalahan
-- <30: Perlu belajar dari dasar
+- 95-100: Sangat baik, makhraj & tajwid tepat
+- 85-94: Baik, ada 1-2 kesalahan minor
+- 75-84: Cukup baik, beberapa kesalahan
+- 65-74: Perlu perbaikan
+- 50-64: Banyak kesalahan
+- <50: Ada lahn jali
 
-INGAT: 
-- Nilai 90+ SANGAT JARANG! Jangan mudah memberi nilai tinggi!
-- Jika ragu, KURANGI nilainya!
-- Lebih baik strict daripada terlalu lunak!
-- Setiap kesalahan HARUS dikurangi nilainya!
-
-RESPONSE FORMAT (JSON only, tanpa markdown):
+RESPONSE (JSON only):
 {
-  "totalScore": <nilai setelah dikurangi>,
-  "lastAyahRecited": <ayat terakhir yang dibaca>,
+  "totalScore": <nilai>,
+  "lastAyahRecited": <ayat terakhir>,
   "ayahScores": [
     {
-      "ayahNumber": <nomor ayat>,
-      "score": <nilai ayat ini>,
+      "ayahNumber": <nomor>,
+      "score": <nilai>,
       "status": "<correct|partial|incorrect>",
-      "feedback": "<WAJIB sebutkan kesalahan spesifik: huruf apa, di kata mana, seharusnya bagaimana>"
+      "feedback": "<kosongkan jika tidak ada kesalahan, atau sebutkan kesalahan SPESIFIK yang terdengar>"
     }
   ],
-  "summary": "<daftar semua kesalahan yang ditemukan>"
+  "summary": "<ringkasan: bagus/perlu perbaikan apa>"
 }
 
-STATUS:
-- "correct" = score >= 85 (hampir sempurna)
-- "partial" = score 65-84 (ada kesalahan)
-- "incorrect" = score < 65 (banyak kesalahan)`;
+STATUS: correct >= 85, partial 65-84, incorrect < 65`;
 
     const mimeType = audioMimeType || "audio/webm";
 
