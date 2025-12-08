@@ -7,6 +7,13 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 
+interface FeedbackItem {
+  id: string;
+  score: number;
+  feedback: string;
+  createdAt: string;
+}
+
 interface Ayah {
   id: string;
   ayahNumber: number;
@@ -14,6 +21,8 @@ interface Ayah {
   translation: string | null;
   score?: number;
   status?: "not_recited" | "correct" | "incorrect" | "partial";
+  totalAttempts?: number;
+  feedbackHistory?: FeedbackItem[];
 }
 
 interface EvaluationResult {
@@ -44,6 +53,7 @@ export default function SurahDetailPage() {
   const [recordingTime, setRecordingTime] = useState(0);
   const [submitting, setSubmitting] = useState(false);
   const [result, setResult] = useState<EvaluationResult | null>(null);
+  const [expandedFeedback, setExpandedFeedback] = useState<Set<number>>(new Set());
   
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
@@ -54,12 +64,22 @@ export default function SurahDetailPage() {
       .then((res) => res.json())
       .then((data) => {
         if (data.success) {
-          // Map progress to ayah format
-          const ayahsWithScores = (data.ayahs || []).map((a: { id: string; ayahNumber: number; arabicText: string; translation: string | null; progress?: { bestScore: number; status: string } }) => ({
+          // Map progress and feedback to ayah format
+          interface ApiAyah {
+            id: string;
+            ayahNumber: number;
+            arabicText: string;
+            translation: string | null;
+            progress?: { bestScore: number; status: string; totalAttempts: number };
+            feedbackHistory?: FeedbackItem[];
+          }
+          const ayahsWithScores = (data.ayahs || []).map((a: ApiAyah) => ({
             ...a,
             score: a.progress?.bestScore,
+            totalAttempts: a.progress?.totalAttempts || 0,
             status: a.progress?.status === "PASSED" ? "correct" as const : 
                    a.progress?.status === "IN_PROGRESS" ? "partial" as const : undefined,
+            feedbackHistory: a.feedbackHistory || [],
           }));
           setAyahs(ayahsWithScores);
           setSurahName(data.surahName || `Surah ${surahNumber}`);
@@ -279,6 +299,9 @@ export default function SurahDetailPage() {
                     {ayah.score !== undefined && (
                       <span className="text-xs font-bold text-gray-600">{ayah.score}</span>
                     )}
+                    {ayah.totalAttempts !== undefined && ayah.totalAttempts > 0 && (
+                      <span className="text-[10px] text-gray-400">{ayah.totalAttempts}x</span>
+                    )}
                   </div>
                   
                   {/* Ayah Content */}
@@ -294,6 +317,65 @@ export default function SurahDetailPage() {
                       </>
                     ) : (
                       <p className="text-gray-400 italic">Teks disembunyikan (Mode Ujian)</p>
+                    )}
+                    
+                    {/* Feedback History - Show/Hide */}
+                    {ayah.feedbackHistory && ayah.feedbackHistory.length > 0 && (
+                      <div className="mt-3 border-t pt-3">
+                        <button
+                          onClick={() => {
+                            setExpandedFeedback(prev => {
+                              const next = new Set(prev);
+                              if (next.has(ayah.ayahNumber)) {
+                                next.delete(ayah.ayahNumber);
+                              } else {
+                                next.add(ayah.ayahNumber);
+                              }
+                              return next;
+                            });
+                          }}
+                          className="text-xs text-emerald-600 hover:text-emerald-700 flex items-center gap-1"
+                        >
+                          {expandedFeedback.has(ayah.ayahNumber) ? "▼" : "▶"} 
+                          Riwayat Feedback ({ayah.feedbackHistory.length})
+                        </button>
+                        
+                        {expandedFeedback.has(ayah.ayahNumber) && (
+                          <div className="mt-2 space-y-2">
+                            {ayah.feedbackHistory.map((fb, idx) => (
+                              <div 
+                                key={fb.id} 
+                                className={`p-2 rounded text-sm ${
+                                  fb.score >= 85 ? "bg-green-50 border-l-4 border-green-500" :
+                                  fb.score >= 65 ? "bg-yellow-50 border-l-4 border-yellow-500" :
+                                  "bg-red-50 border-l-4 border-red-500"
+                                }`}
+                              >
+                                <div className="flex justify-between items-center mb-1">
+                                  <span className={`font-bold ${
+                                    fb.score >= 85 ? "text-green-700" :
+                                    fb.score >= 65 ? "text-yellow-700" :
+                                    "text-red-700"
+                                  }`}>
+                                    #{ayah.feedbackHistory!.length - idx} - Score: {fb.score}
+                                  </span>
+                                  <span className="text-[10px] text-gray-400">
+                                    {new Date(fb.createdAt).toLocaleDateString("id-ID", {
+                                      day: "numeric",
+                                      month: "short",
+                                      hour: "2-digit",
+                                      minute: "2-digit",
+                                    })}
+                                  </span>
+                                </div>
+                                {fb.feedback && (
+                                  <p className="text-gray-700">{fb.feedback}</p>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
                     )}
                   </div>
                 </div>

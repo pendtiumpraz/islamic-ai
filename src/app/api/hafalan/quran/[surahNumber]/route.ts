@@ -66,16 +66,18 @@ export async function GET(
       }, { status: 403 });
     }
 
-    // Get user progress for each ayah
+    // Get user progress and feedback history for each ayah
     let ayahsWithProgress = ayahs.map((a) => ({
       id: a.id,
       ayahNumber: a.ayahStart || 1,
       arabicText: a.arabicText,
       translation: a.translation,
-      progress: null as { status: string; bestScore: number } | null,
+      progress: null as { status: string; bestScore: number; totalAttempts: number } | null,
+      feedbackHistory: [] as { id: string; score: number; feedback: string; createdAt: Date }[],
     }));
 
     if (session?.user?.id) {
+      // Get progress
       const progress = await prisma.hafalanProgress.findMany({
         where: {
           userId: session.user.id,
@@ -85,16 +87,51 @@ export async function GET(
           itemId: true,
           status: true,
           bestScore: true,
+          totalAttempts: true,
+        },
+      });
+
+      // Get all submissions (feedback history) - cannot be deleted
+      const submissions = await prisma.hafalanSubmission.findMany({
+        where: {
+          userId: session.user.id,
+          itemId: { in: ayahs.map((a) => a.id) },
+        },
+        orderBy: { createdAt: "desc" },
+        select: {
+          id: true,
+          itemId: true,
+          score: true,
+          feedbackSummary: true,
+          createdAt: true,
         },
       });
 
       const progressMap = new Map(progress.map((p) => [p.itemId, p]));
+      const submissionsMap = new Map<string, typeof submissions>();
+      submissions.forEach((s) => {
+        if (!submissionsMap.has(s.itemId)) {
+          submissionsMap.set(s.itemId, []);
+        }
+        submissionsMap.get(s.itemId)!.push(s);
+      });
 
       ayahsWithProgress = ayahsWithProgress.map((ayah) => {
         const prog = progressMap.get(ayah.id);
+        const subs = submissionsMap.get(ayah.id) || [];
         return {
           ...ayah,
-          progress: prog ? { status: prog.status, bestScore: prog.bestScore } : null,
+          progress: prog ? { 
+            status: prog.status, 
+            bestScore: prog.bestScore,
+            totalAttempts: prog.totalAttempts,
+          } : null,
+          feedbackHistory: subs.map((s) => ({
+            id: s.id,
+            score: s.score,
+            feedback: s.feedbackSummary || "",
+            createdAt: s.createdAt,
+          })),
         };
       });
     }

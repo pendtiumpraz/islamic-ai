@@ -55,46 +55,114 @@ export async function POST(request: NextRequest) {
       text: a.arabicText,
     }));
 
-    const prompt = `Kamu adalah penguji hafalan Al-Quran yang ahli dalam tajwid dan makhraj.
+    const prompt = `Kamu adalah GURU TAHSIN AL-QURAN yang SANGAT KETAT. Ini bukan hanya hafalan, tapi juga TAHSIN - evaluasi kualitas bacaan SETIAP HURUF.
 
-SURAH: ${surahName} (${ayahs.length} ayat)
+SURAH: ${surahName} (Surah ke-${surahNumber})
 
-DAFTAR AYAT:
-${ayahTexts.map((a) => `Ayat ${a.number}: ${a.text}`).join("\n")}
+TEKS YANG HARUS DIBACA:
+${ayahTexts.map((a) => `[Ayat ${a.number}] ${a.text}`).join("\n")}
 
-TUGAS:
-1. Dengarkan rekaman audio yang dikirim
-2. Identifikasi ayat mana saja yang dibaca (dari ayat 1 sampai ayat berapa)
-3. Evaluasi setiap ayat yang dibaca dengan skor 0-100
-4. Berikan feedback singkat
+=== EVALUASI TAHSIN PER HURUF ===
 
-KRITERIA PENILAIAN:
-- Accuracy (ketepatan bacaan): 40%
-- Tajwid (hukum bacaan): 30%
-- Makharijul huruf: 20%
-- Kelancaran: 10%
+Dengarkan SETIAP HURUF dan evaluasi:
 
-RESPONSE FORMAT (JSON only, no markdown):
+1. MAKHARIJUL HURUF (30 poin)
+   Periksa SETIAP huruf apakah keluar dari makhraj yang benar:
+   - Al-Jauf (rongga mulut): ا و ي (huruf mad)
+   - Al-Halq (tenggorokan): ء ه ع ح غ خ
+   - Al-Lisan (lidah): ق ك ج ش ي ض ل ن ر ط د ت ظ ذ ث ز س ص
+   - Asy-Syafatain (dua bibir): ب م و ف
+   - Al-Khaisyum (pangkal hidung): untuk ghunnah
+   
+   KESALAHAN UMUM yang harus dideteksi:
+   - ع dibaca seperti أ
+   - ح dibaca seperti ه
+   - ق dibaca seperti ك
+   - ض dibaca seperti د atau ظ
+   - ط dibaca seperti ت
+   - ص dibaca seperti س
+   - ذ dibaca seperti ز
+   - ث dibaca seperti س
+   
+   → KURANGI 5 poin per huruf yang salah makhrajnya
+
+2. SIFATUL HURUF (20 poin)
+   - Hams/Jahr (bisikan/keras)
+   - Syiddah/Rakhawah/Tawassuth (kuat/lunak/sedang)
+   - Isti'la/Istifal (terangkat/turun lidah)
+   - Ithbaq/Infitah (tertutup/terbuka)
+   - Shafir, Qalqalah, Lin, Inhiraf, Takrir, Tafasysyi, Istithalah
+   → KURANGI 3 poin per sifat yang tidak tepat
+
+3. HUKUM NUN MATI & TANWIN (15 poin)
+   - Idzhar Halqi (نْ/tanwin + ء ه ع ح غ خ) = jelas tanpa ghunnah
+   - Idgham Bighunnah (نْ/tanwin + ي ن م و) = lebur dengan dengung
+   - Idgham Bilaghunnah (نْ/tanwin + ل ر) = lebur tanpa dengung
+   - Iqlab (نْ/tanwin + ب) = ganti menjadi م
+   - Ikhfa Haqiqi (نْ/tanwin + 15 huruf lainnya) = samar dengan ghunnah
+   → KURANGI 5 poin per hukum yang salah
+
+4. HUKUM MIM MATI (10 poin)
+   - Idgham Mimi (مْ + م) = lebur dengan ghunnah
+   - Ikhfa Syafawi (مْ + ب) = samar dengan ghunnah
+   - Idzhar Syafawi (مْ + huruf lain) = jelas
+   → KURANGI 3 poin per kesalahan
+
+5. MAD - PANJANG PENDEK (15 poin)
+   SANGAT PENTING! Perhatikan durasi:
+   - Mad Thabi'i = 2 harakat (1 alif)
+   - Mad Wajib Muttashil = 4-5 harakat
+   - Mad Jaiz Munfashil = 2/4/5 harakat
+   - Mad Lazim = 6 harakat
+   - Mad 'Aridh Lissukun = 2/4/6 harakat
+   - Mad Badal = 2 harakat
+   - Mad Iwadh = 2 harakat
+   
+   KESALAHAN: mad dipendekkan atau dipanjangkan tidak sesuai
+   → KURANGI 5 poin per mad yang salah panjangnya
+
+6. GHUNNAH (5 poin)
+   Dengung pada ن dan م (2 harakat)
+   → KURANGI 2 poin jika tidak ada/kurang ghunnah
+
+7. QALQALAH (5 poin)
+   Huruf ق ط ب ج د harus memantul saat sukun/waqaf
+   → KURANGI 2 poin per qalqalah yang tidak jelas
+
+STANDAR NILAI KETAT:
+- 95-100: MUMTAZ - Hampir sempurna, makhraj & tajwid sangat baik
+- 85-94: JAYYID JIDDAN - Sangat baik, kesalahan minor 1-2x
+- 75-84: JAYYID - Baik, ada beberapa kesalahan
+- 65-74: MAQBUL - Cukup, perlu perbaikan beberapa aspek
+- 50-64: DHAIF - Lemah, banyak kesalahan makhraj/tajwid
+- <50: RASIB - Perlu belajar ulang dari dasar
+
+PERINGATAN KERAS:
+❌ Jika ada LAHN JALI (kesalahan fatal yang mengubah makna) = maksimal 50
+❌ Jika makhraj huruf halqi (ع ح خ غ) salah = kurangi 10 poin
+❌ Jika mad thabi'i dipendekkan = kurangi 5 poin per kejadian
+❌ Jika ghunnah tidak ada = kurangi 3 poin per kejadian
+
+RESPONSE (JSON only):
 {
-  "totalScore": <rata-rata skor 0-100>,
-  "lastAyahRecited": <nomor ayat terakhir yang dibaca>,
+  "totalScore": <0-100>,
+  "lastAyahRecited": <ayat terakhir>,
   "ayahScores": [
     {
-      "ayahNumber": 1,
+      "ayahNumber": <nomor>,
       "score": <0-100>,
       "status": "<correct|partial|incorrect>",
-      "feedback": "<feedback singkat jika ada kesalahan>"
+      "feedback": "<SPESIFIK: huruf X di kata Y salah makhrajnya, seharusnya Z>"
     }
   ],
-  "summary": "<ringkasan evaluasi dalam bahasa Indonesia, max 2 kalimat>"
+  "summary": "<kesalahan utama yang harus diperbaiki>"
 }
 
 RULES:
-- Jika ayat tidak dibaca, jangan masukkan ke ayahScores
-- status "correct" = skor >= 80
-- status "partial" = skor 50-79
-- status "incorrect" = skor < 50
-- Berikan response JSON saja tanpa markdown`;
+- correct = skor >= 85
+- partial = skor 65-84  
+- incorrect = skor < 65
+- Feedback harus SPESIFIK menyebut huruf dan kata yang salah`;
 
     const mimeType = audioMimeType || "audio/webm";
 
@@ -140,8 +208,9 @@ RULES:
 
         const currentBestScore = existingProgress?.bestScore || 0;
         const newBestScore = Math.max(currentBestScore, ayahScore.score);
-        const isPassed = newBestScore >= 70;
-        const isFirstPass = !existingProgress?.firstPassedAt && ayahScore.score >= 70;
+        // Tahsin standard: 85+ = PASSED (correct), 65-84 = partial, <65 = incorrect
+        const isPassed = newBestScore >= 85;
+        const isFirstPass = !existingProgress?.firstPassedAt && ayahScore.score >= 85;
 
         // Save submission record (history)
         await prisma.hafalanSubmission.create({
@@ -151,7 +220,7 @@ RULES:
             itemType: "QURAN",
             mode: "WITH_TEXT",
             score: ayahScore.score,
-            passed: ayahScore.score >= 70,
+            passed: ayahScore.score >= 85,
             feedbackSummary: ayahScore.feedback || "",
             feedbackCorrections: [],
             feedbackTips: [],
@@ -182,9 +251,9 @@ RULES:
             bestScore: ayahScore.score,
             totalAttempts: 1,
             lastAttemptAt: new Date(),
-            status: ayahScore.score >= 70 ? "PASSED" : "IN_PROGRESS",
-            canProceed: ayahScore.score >= 70,
-            firstPassedAt: ayahScore.score >= 70 ? new Date() : null,
+            status: ayahScore.score >= 85 ? "PASSED" : "IN_PROGRESS",
+            canProceed: ayahScore.score >= 85,
+            firstPassedAt: ayahScore.score >= 85 ? new Date() : null,
           },
         });
       }
