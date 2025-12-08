@@ -7,12 +7,12 @@ if (!process.env.GEMINI_API_KEY) {
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
 
 export const geminiModel = genAI.getGenerativeModel({
-  model: "gemini-2.0-flash-exp",
+  model: "gemini-2.5-flash",
 });
 
-// Model untuk audio - Gemini 2.0 Flash Experimental (free tier available)
+// Model untuk audio
 export const geminiAudioModel = genAI.getGenerativeModel({
-  model: "gemini-2.0-flash-exp",
+  model: "gemini-2.5-flash",
 });
 
 export interface ChatMessage {
