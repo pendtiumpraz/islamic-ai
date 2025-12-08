@@ -1,13 +1,11 @@
-import { Metadata } from "next";
+"use client";
 
-export const metadata: Metadata = {
-  title: "Dashboard",
-};
+import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
 
-export default function DashboardLayout({
+export default function DashboardRootLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  return <>{children}</>;
+  return <DashboardLayout>{children}</DashboardLayout>;
 }
