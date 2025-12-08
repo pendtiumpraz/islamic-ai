@@ -1,94 +1,14 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import Link from "next/link";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 
-interface HafalanItem {
-  id: string;
-  type: string;
-  title: string;
-  surahNumber: number | null;
-  ayahStart: number | null;
-  ayahEnd: number | null;
-  juzNumber: number | null;
-  haditsNumber: number | null;
-  minTier: string;
-  arabicText: string;
-  progress?: {
-    status: string;
-    bestScore: number;
-    totalAttempts: number;
-  };
-}
-
-const typeLabels: Record<string, string> = {
-  QURAN: "Al-Quran",
-  HADITS: "Hadits",
-  MATAN: "Matan",
-};
-
-const typeColors: Record<string, string> = {
-  QURAN: "bg-emerald-100 text-emerald-800",
-  HADITS: "bg-blue-100 text-blue-800",
-  MATAN: "bg-purple-100 text-purple-800",
-};
-
-const statusColors: Record<string, string> = {
-  NOT_STARTED: "bg-gray-100 text-gray-600",
-  IN_PROGRESS: "bg-yellow-100 text-yellow-800",
-  PASSED: "bg-green-100 text-green-800",
-  MEMORIZED: "bg-emerald-500 text-white",
-};
-
-const statusLabels: Record<string, string> = {
-  NOT_STARTED: "Belum Mulai",
-  IN_PROGRESS: "Sedang Hafal",
-  PASSED: "Lulus",
-  MEMORIZED: "Hafal",
-};
-
-const tierColors: Record<string, string> = {
-  FREE: "bg-gray-100 text-gray-700",
-  BRONZE: "bg-amber-100 text-amber-800",
-  SILVER: "bg-slate-200 text-slate-700",
-  GOLD: "bg-yellow-100 text-yellow-800",
-};
+type TabType = "quran" | "hadits" | "matan";
 
 export default function HafidzPage() {
-  const [items, setItems] = useState<HafalanItem[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [selectedType, setSelectedType] = useState<string | null>(null);
-  const [selectedJuz, setSelectedJuz] = useState<number | null>(null);
-
-  useEffect(() => {
-    fetch("/api/hafalan/items")
-      .then((res) => res.json())
-      .then((data) => {
-        setItems(data.items || []);
-        setLoading(false);
-      })
-      .catch(() => setLoading(false));
-  }, []);
-
-  const types = Array.from(new Set(items.map((i) => i.type)));
-  const juzList = Array.from(new Set(items.filter(i => i.juzNumber).map((i) => i.juzNumber))).sort((a, b) => (b || 0) - (a || 0));
-  
-  const filteredItems = items.filter((i) => {
-    if (selectedType && i.type !== selectedType) return false;
-    if (selectedJuz && i.juzNumber !== selectedJuz) return false;
-    return true;
-  });
-
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-600"></div>
-      </div>
-    );
-  }
+  const [activeTab, setActiveTab] = useState<TabType>("quran");
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -104,155 +24,183 @@ export default function HafidzPage() {
         </div>
       </header>
 
-      <main className="container mx-auto px-4 py-8">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Setoran Hafalan</h1>
-          <p className="text-gray-600">
-            Pilih materi untuk memulai setoran hafalan dengan evaluasi AI
-          </p>
+      <main className="container mx-auto px-4 py-6 max-w-6xl">
+        {/* Tabs */}
+        <div className="flex gap-2 mb-6 border-b">
+          <button
+            onClick={() => setActiveTab("quran")}
+            className={`px-6 py-3 font-medium transition-colors ${
+              activeTab === "quran"
+                ? "text-emerald-600 border-b-2 border-emerald-600"
+                : "text-gray-500 hover:text-gray-700"
+            }`}
+          >
+            📖 Al-Quran
+          </button>
+          <button
+            onClick={() => setActiveTab("hadits")}
+            className={`px-6 py-3 font-medium transition-colors ${
+              activeTab === "hadits"
+                ? "text-blue-600 border-b-2 border-blue-600"
+                : "text-gray-500 hover:text-gray-700"
+            }`}
+          >
+            📜 Hadits Arbain
+          </button>
+          <button
+            onClick={() => setActiveTab("matan")}
+            className={`px-6 py-3 font-medium transition-colors ${
+              activeTab === "matan"
+                ? "text-purple-600 border-b-2 border-purple-600"
+                : "text-gray-500 hover:text-gray-700"
+            }`}
+          >
+            📚 Matan
+          </button>
         </div>
 
-        {/* Filters */}
-        <div className="space-y-3 mb-6">
-          {/* Type Filter */}
-          <div className="flex flex-wrap gap-2">
-            <span className="text-sm text-gray-500 py-1">Tipe:</span>
-            <Button
-              variant={selectedType === null ? "default" : "outline"}
-              size="sm"
-              onClick={() => setSelectedType(null)}
-            >
-              Semua
-            </Button>
-            {types.map((type) => (
-              <Button
-                key={type}
-                variant={selectedType === type ? "default" : "outline"}
-                size="sm"
-                onClick={() => setSelectedType(type)}
-              >
-                {typeLabels[type] || type}
-              </Button>
-            ))}
-          </div>
-          
-          {/* Juz Filter */}
-          <div className="flex flex-wrap gap-2">
-            <span className="text-sm text-gray-500 py-1">Juz:</span>
-            <Button
-              variant={selectedJuz === null ? "default" : "outline"}
-              size="sm"
-              onClick={() => setSelectedJuz(null)}
-            >
-              Semua
-            </Button>
-            {juzList.map((juz) => (
-              <Button
-                key={juz}
-                variant={selectedJuz === juz ? "default" : "outline"}
-                size="sm"
-                onClick={() => setSelectedJuz(juz)}
-              >
-                Juz {juz}
-              </Button>
-            ))}
-          </div>
-        </div>
-
-        {/* Stats */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-          <Card>
-            <CardContent className="pt-6 text-center">
-              <p className="text-3xl font-bold text-gray-900">{items.length}</p>
-              <p className="text-sm text-gray-500">Total Materi</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="pt-6 text-center">
-              <p className="text-3xl font-bold text-emerald-600">
-                {items.filter((i) => i.progress?.status === "PASSED" || i.progress?.status === "MEMORIZED").length}
-              </p>
-              <p className="text-sm text-gray-500">Lulus</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="pt-6 text-center">
-              <p className="text-3xl font-bold text-yellow-600">
-                {items.filter((i) => i.progress?.status === "IN_PROGRESS").length}
-              </p>
-              <p className="text-sm text-gray-500">Sedang Hafal</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="pt-6 text-center">
-              <p className="text-3xl font-bold text-gray-400">
-                {items.filter((i) => !i.progress || i.progress.status === "NOT_STARTED").length}
-              </p>
-              <p className="text-sm text-gray-500">Belum Mulai</p>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Items Grid */}
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {filteredItems.map((item) => (
-            <Link key={item.id} href={`/dashboard/hafidz/${item.id}`}>
-              <Card className="h-full hover:shadow-lg transition-shadow cursor-pointer">
-                <CardHeader className="pb-3">
-                  <div className="flex items-start justify-between gap-1 flex-wrap">
-                    <div className="flex gap-1">
-                      <Badge className={typeColors[item.type]}>
-                        {typeLabels[item.type]}
-                      </Badge>
-                      {item.juzNumber && (
-                        <Badge variant="outline">Juz {item.juzNumber}</Badge>
-                      )}
-                      <Badge className={tierColors[item.minTier]}>
-                        {item.minTier}
-                      </Badge>
-                    </div>
-                    {item.progress && (
-                      <Badge className={statusColors[item.progress.status]}>
-                        {statusLabels[item.progress.status]}
-                      </Badge>
-                    )}
-                  </div>
-                  <CardTitle className="text-lg mt-2">{item.title}</CardTitle>
-                  {item.surahNumber && (
-                    <CardDescription>
-                      Ayat {item.ayahStart}-{item.ayahEnd}
-                    </CardDescription>
-                  )}
-                  {item.haditsNumber && (
-                    <CardDescription>Hadits ke-{item.haditsNumber}</CardDescription>
-                  )}
-                </CardHeader>
-                <CardContent>
-                  <p className="text-right font-arabic text-lg text-gray-800 line-clamp-2 leading-loose">
-                    {item.arabicText.substring(0, 100)}...
-                  </p>
-                  {item.progress && item.progress.totalAttempts > 0 && (
-                    <div className="mt-3 flex items-center justify-between text-sm">
-                      <span className="text-gray-500">
-                        {item.progress.totalAttempts}x percobaan
-                      </span>
-                      <span className="font-semibold text-emerald-600">
-                        Skor: {item.progress.bestScore}
-                      </span>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            </Link>
-          ))}
-        </div>
-
-        {filteredItems.length === 0 && (
-          <div className="text-center py-12 text-gray-500">
-            Tidak ada materi hafalan ditemukan
-          </div>
-        )}
+        {/* Tab Content */}
+        {activeTab === "quran" && <QuranTab />}
+        {activeTab === "hadits" && <HaditsTab />}
+        {activeTab === "matan" && <MatanTab />}
       </main>
+    </div>
+  );
+}
+
+function QuranTab() {
+  return (
+    <div>
+      <div className="mb-6">
+        <h2 className="text-2xl font-bold text-gray-900 mb-2">Hafalan Al-Quran</h2>
+        <p className="text-gray-600">Pilih surah untuk memulai setoran hafalan per ayat</p>
+      </div>
+
+      {/* Juz Cards */}
+      <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {[30, 29, 28, 27, 26].map((juz) => (
+          <Link key={juz} href={`/dashboard/hafidz/quran?juz=${juz}`}>
+            <Card className="hover:shadow-lg transition-shadow cursor-pointer hover:border-emerald-300">
+              <CardHeader>
+                <CardTitle className="flex items-center justify-between">
+                  <span>Juz {juz}</span>
+                  <span className="text-sm font-normal text-gray-500">
+                    {juz === 30 ? "FREE" : juz === 29 ? "BRONZE" : "SILVER+"}
+                  </span>
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-gray-600 text-sm">
+                  {juz === 30 && "Surah An-Naba' - An-Nas"}
+                  {juz === 29 && "Surah Al-Mulk - Al-Mursalat"}
+                  {juz === 28 && "Surah Al-Mujadilah - At-Tahrim"}
+                  {juz === 27 && "Surah Az-Zariyat - Al-Hadid"}
+                  {juz === 26 && "Surah Al-Ahqaf - Az-Zariyat"}
+                </p>
+              </CardContent>
+            </Card>
+          </Link>
+        ))}
+        
+        <Link href="/dashboard/hafidz/quran">
+          <Card className="hover:shadow-lg transition-shadow cursor-pointer border-dashed hover:border-emerald-300">
+            <CardHeader>
+              <CardTitle>Semua Juz</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-gray-600 text-sm">Lihat semua 114 surah</p>
+            </CardContent>
+          </Card>
+        </Link>
+      </div>
+    </div>
+  );
+}
+
+function HaditsTab() {
+  return (
+    <div>
+      <div className="mb-6">
+        <h2 className="text-2xl font-bold text-gray-900 mb-2">Hadits Arbain Nawawi</h2>
+        <p className="text-gray-600">42 Hadits pilihan Imam Nawawi untuk dihafal</p>
+      </div>
+
+      <Link href="/dashboard/hafidz/hadits">
+        <Card className="hover:shadow-lg transition-shadow cursor-pointer hover:border-blue-300 max-w-md">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-3">
+              <span className="text-3xl">📜</span>
+              <div>
+                <p>Hadits Arbain</p>
+                <p className="text-sm font-normal text-gray-500">42 Hadits</p>
+              </div>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-gray-600 text-sm">
+              Kumpulan 42 hadits pilihan yang mencakup pokok-pokok ajaran Islam
+            </p>
+            <Button className="mt-4 w-full" variant="outline">
+              Mulai Hafalan
+            </Button>
+          </CardContent>
+        </Card>
+      </Link>
+    </div>
+  );
+}
+
+function MatanTab() {
+  return (
+    <div>
+      <div className="mb-6">
+        <h2 className="text-2xl font-bold text-gray-900 mb-2">Matan Ilmiah</h2>
+        <p className="text-gray-600">Kitab-kitab matan untuk dihafal</p>
+      </div>
+
+      <div className="grid md:grid-cols-2 gap-4">
+        <Link href="/dashboard/hafidz/matan/ushul-tsalatsah">
+          <Card className="hover:shadow-lg transition-shadow cursor-pointer hover:border-purple-300">
+            <CardHeader>
+              <div className="flex items-center gap-4">
+                <div className="w-16 h-20 bg-gradient-to-br from-purple-100 to-purple-200 rounded-lg flex items-center justify-center">
+                  <span className="text-2xl">📕</span>
+                </div>
+                <div>
+                  <CardTitle>Ushul Tsalatsah</CardTitle>
+                  <p className="text-sm text-gray-500 mt-1">Syaikh Muhammad bin Abdul Wahhab</p>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <p className="text-gray-600 text-sm">
+                Tiga landasan utama yang wajib diketahui setiap Muslim
+              </p>
+            </CardContent>
+          </Card>
+        </Link>
+
+        <Link href="/dashboard/hafidz/matan/qawaidul-arba">
+          <Card className="hover:shadow-lg transition-shadow cursor-pointer hover:border-purple-300">
+            <CardHeader>
+              <div className="flex items-center gap-4">
+                <div className="w-16 h-20 bg-gradient-to-br from-purple-100 to-purple-200 rounded-lg flex items-center justify-center">
+                  <span className="text-2xl">📗</span>
+                </div>
+                <div>
+                  <CardTitle>Qawaidul Arba</CardTitle>
+                  <p className="text-sm text-gray-500 mt-1">Syaikh Muhammad bin Abdul Wahhab</p>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <p className="text-gray-600 text-sm">
+                Empat kaidah penting dalam memahami tauhid
+              </p>
+            </CardContent>
+          </Card>
+        </Link>
+      </div>
     </div>
   );
 }

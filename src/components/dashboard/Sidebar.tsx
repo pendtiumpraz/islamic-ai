@@ -28,7 +28,11 @@ const mainNavItems = [
     title: "Write Mode",
     href: "/dashboard/write",
     icon: "✍️",
-    soon: true,
+  },
+  {
+    title: "Learn Mode",
+    href: "/dashboard/learn",
+    icon: "📚",
   },
 ];
 
@@ -118,23 +122,16 @@ export function Sidebar({ onClose }: SidebarProps) {
         {mainNavItems.map((item) => (
           <Link
             key={item.href}
-            href={item.soon ? "#" : item.href}
-            onClick={item.soon ? (e) => e.preventDefault() : onClose}
+            href={item.href}
+            onClick={onClose}
             className={`flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 ${
               isActive(item.href, item.exact)
                 ? "bg-emerald-100 text-emerald-700 font-medium"
-                : item.soon
-                ? "text-gray-400 cursor-not-allowed"
                 : "text-gray-600 hover:bg-gray-100 hover:text-gray-900"
             }`}
           >
             <span className="text-xl">{item.icon}</span>
             <span>{item.title}</span>
-            {item.soon && (
-              <Badge variant="secondary" className="ml-auto text-xs">
-                Segera
-              </Badge>
-            )}
           </Link>
         ))}
 
