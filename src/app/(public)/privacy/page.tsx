@@ -1,40 +1,44 @@
+"use client";
+
 import Link from "next/link";
-import Image from "next/image";
-import { Button } from "@/components/ui/button";
+import { Navbar } from "@/components/public/Navbar";
+import { Footer } from "@/components/public/Footer";
+
+const dataTypes = [
+  { icon: "👤", title: "Informasi Akun", desc: "Nama, email, foto profil dari Google OAuth" },
+  { icon: "💬", title: "Data Penggunaan", desc: "Riwayat chat, setoran hafalan, progress belajar" },
+  { icon: "🔧", title: "Informasi Teknis", desc: "Alamat IP, jenis browser, perangkat" },
+  { icon: "💳", title: "Informasi Donasi", desc: "Jumlah donasi, metode pembayaran (tanpa detail kartu)" },
+];
+
+const security = [
+  { icon: "🔐", title: "Enkripsi HTTPS", desc: "Semua data dalam transit terenkripsi" },
+  { icon: "🛡️", title: "Database Aman", desc: "Data tersimpan dengan enkripsi AES-256" },
+  { icon: "🔑", title: "OAuth Secure", desc: "Login aman via Google, tanpa password tersimpan" },
+  { icon: "👁️", title: "Monitoring 24/7", desc: "Sistem keamanan dipantau terus-menerus" },
+];
+
+const rights = [
+  { title: "Hak Akses", desc: "Melihat semua data pribadi yang kami simpan" },
+  { title: "Hak Koreksi", desc: "Meminta perbaikan data yang tidak akurat" },
+  { title: "Hak Hapus", desc: "Meminta penghapusan akun dan semua data" },
+  { title: "Hak Portabilitas", desc: "Mengunduh salinan data Anda" },
+];
 
 export default function PrivacyPage() {
   return (
-    <div className="min-h-screen bg-white">
-      {/* Header */}
-      <header className="border-b bg-white/80 backdrop-blur-sm sticky top-0 z-50">
-        <div className="container mx-auto flex h-16 items-center justify-between px-4">
-          <Link href="/" className="text-2xl font-bold text-emerald-600">
-            ILMUNA
-          </Link>
-          <nav className="hidden md:flex items-center gap-6">
-            <Link href="/about" className="text-gray-600 hover:text-emerald-600 transition">Tentang</Link>
-            <Link href="/pricing" className="text-gray-600 hover:text-emerald-600 transition">Donasi</Link>
-            <Link href="/login">
-              <Button>Masuk</Button>
-            </Link>
-          </nav>
-        </div>
-      </header>
+    <div className="min-h-screen bg-white overflow-x-hidden">
+      <Navbar />
 
-      {/* Hero */}
-      <section className="relative py-16 overflow-hidden bg-gradient-to-br from-emerald-900 to-teal-800">
-        <div className="absolute inset-0 z-0 opacity-20">
-          <Image
-            src="https://images.unsplash.com/photo-1563986768609-322da13575f3?w=1920&h=400&fit=crop"
-            alt="Privacy"
-            fill
-            className="object-cover"
-          />
-        </div>
+      {/* Hero Section */}
+      <section className="relative pt-32 pb-16 bg-gradient-to-br from-emerald-900 to-teal-800 overflow-hidden">
+        <div className="absolute inset-0 pattern-islamic opacity-10" />
         <div className="container mx-auto px-4 relative z-10">
           <div className="max-w-3xl">
-            <p className="text-emerald-300 text-sm uppercase tracking-wider mb-2">Legal</p>
-            <h1 className="text-4xl font-bold text-white mb-4">
+            <span className="inline-block px-4 py-2 bg-white/10 text-emerald-200 rounded-full text-sm font-medium mb-6">
+              🔒 Privasi
+            </span>
+            <h1 className="text-4xl md:text-5xl font-bold text-white mb-4">
               Kebijakan Privasi
             </h1>
             <p className="text-emerald-100">
@@ -45,190 +49,181 @@ export default function PrivacyPage() {
       </section>
 
       {/* Content */}
-      <main className="py-16">
+      <section className="py-16">
         <div className="container mx-auto px-4">
           <div className="max-w-3xl mx-auto">
-            <div className="prose prose-lg prose-gray max-w-none">
-              
-              <section className="mb-10 p-6 bg-emerald-50 rounded-xl border border-emerald-100">
-                <p className="text-emerald-800 m-0">
-                  <strong>🔒 Komitmen Kami:</strong> Kami sangat menghargai privasi Anda. Kami tidak
-                  menjual data pribadi Anda kepada pihak ketiga. Data Anda digunakan hanya untuk
-                  meningkatkan pengalaman belajar Anda di ILMUNA.
-                </p>
-              </section>
-
-              <section className="mb-10">
-                <h2 className="text-2xl font-bold text-gray-900 mb-4 flex items-center gap-3">
-                  <span className="w-8 h-8 bg-emerald-100 rounded-lg flex items-center justify-center text-emerald-600 text-sm font-bold">1</span>
-                  Informasi yang Kami Kumpulkan
-                </h2>
-                <p className="text-gray-600 leading-relaxed mb-4">Kami mengumpulkan informasi berikut:</p>
-                <div className="grid gap-3">
-                  <div className="p-4 bg-gray-50 rounded-lg">
-                    <p className="font-semibold text-gray-900 mb-1">👤 Informasi Akun</p>
-                    <p className="text-gray-600 text-sm">Nama, email, foto profil (dari Google OAuth)</p>
-                  </div>
-                  <div className="p-4 bg-gray-50 rounded-lg">
-                    <p className="font-semibold text-gray-900 mb-1">📊 Data Penggunaan</p>
-                    <p className="text-gray-600 text-sm">Riwayat chat, setoran hafalan, progress belajar</p>
-                  </div>
-                  <div className="p-4 bg-gray-50 rounded-lg">
-                    <p className="font-semibold text-gray-900 mb-1">🔧 Informasi Teknis</p>
-                    <p className="text-gray-600 text-sm">Alamat IP, jenis browser, perangkat</p>
-                  </div>
-                  <div className="p-4 bg-gray-50 rounded-lg">
-                    <p className="font-semibold text-gray-900 mb-1">💳 Informasi Donasi</p>
-                    <p className="text-gray-600 text-sm">Jumlah donasi, metode pembayaran (tanpa detail kartu)</p>
-                  </div>
-                </div>
-              </section>
-
-              <section className="mb-10">
-                <h2 className="text-2xl font-bold text-gray-900 mb-4 flex items-center gap-3">
-                  <span className="w-8 h-8 bg-emerald-100 rounded-lg flex items-center justify-center text-emerald-600 text-sm font-bold">2</span>
-                  Penggunaan Informasi
-                </h2>
-                <p className="text-gray-600 leading-relaxed mb-4">Informasi Anda digunakan untuk:</p>
-                <ul className="space-y-2 text-gray-600">
-                  <li className="flex items-start gap-2">
-                    <span className="text-emerald-500 mt-1">✓</span>
-                    Menyediakan dan meningkatkan layanan
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <span className="text-emerald-500 mt-1">✓</span>
-                    Personalisasi pengalaman belajar
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <span className="text-emerald-500 mt-1">✓</span>
-                    Mengirim notifikasi terkait layanan
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <span className="text-emerald-500 mt-1">✓</span>
-                    Memproses donasi dan memberikan akses premium
-                  </li>
-                </ul>
-              </section>
-
-              <section className="mb-10">
-                <h2 className="text-2xl font-bold text-gray-900 mb-4 flex items-center gap-3">
-                  <span className="w-8 h-8 bg-emerald-100 rounded-lg flex items-center justify-center text-emerald-600 text-sm font-bold">3</span>
-                  Keamanan Data
-                </h2>
-                <p className="text-gray-600 leading-relaxed mb-4">
-                  Kami menerapkan langkah-langkah keamanan industri:
-                </p>
-                <div className="grid md:grid-cols-2 gap-3">
-                  <div className="p-4 bg-emerald-50 rounded-lg border border-emerald-100">
-                    <p className="font-semibold text-emerald-800">🔐 Enkripsi HTTPS</p>
-                    <p className="text-emerald-700 text-sm">Data dalam transit terenkripsi</p>
-                  </div>
-                  <div className="p-4 bg-emerald-50 rounded-lg border border-emerald-100">
-                    <p className="font-semibold text-emerald-800">🛡️ Database Aman</p>
-                    <p className="text-emerald-700 text-sm">Data tersimpan terenkripsi</p>
-                  </div>
-                  <div className="p-4 bg-emerald-50 rounded-lg border border-emerald-100">
-                    <p className="font-semibold text-emerald-800">🔑 OAuth Secure</p>
-                    <p className="text-emerald-700 text-sm">Login via Google yang aman</p>
-                  </div>
-                  <div className="p-4 bg-emerald-50 rounded-lg border border-emerald-100">
-                    <p className="font-semibold text-emerald-800">👁️ Monitoring</p>
-                    <p className="text-emerald-700 text-sm">Pemantauan keamanan 24/7</p>
-                  </div>
-                </div>
-              </section>
-
-              <section className="mb-10">
-                <h2 className="text-2xl font-bold text-gray-900 mb-4 flex items-center gap-3">
-                  <span className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center text-blue-600 text-sm font-bold">4</span>
-                  Hak Pengguna
-                </h2>
-                <p className="text-gray-600 leading-relaxed mb-4">Anda memiliki hak untuk:</p>
-                <ul className="space-y-2 text-gray-600">
-                  <li className="flex items-start gap-2">
-                    <span className="text-blue-500 mt-1">→</span>
-                    <strong>Akses:</strong> Melihat data pribadi Anda
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <span className="text-blue-500 mt-1">→</span>
-                    <strong>Koreksi:</strong> Meminta perbaikan data yang tidak akurat
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <span className="text-blue-500 mt-1">→</span>
-                    <strong>Hapus:</strong> Meminta penghapusan akun dan data
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <span className="text-blue-500 mt-1">→</span>
-                    <strong>Portabilitas:</strong> Mengunduh data Anda
-                  </li>
-                </ul>
-                <p className="text-gray-600 mt-4">
-                  Untuk menggunakan hak-hak ini, hubungi kami melalui email.
-                </p>
-              </section>
-
-              <section className="mb-10">
-                <h2 className="text-2xl font-bold text-gray-900 mb-4 flex items-center gap-3">
-                  <span className="w-8 h-8 bg-emerald-100 rounded-lg flex items-center justify-center text-emerald-600 text-sm font-bold">5</span>
-                  Berbagi Informasi
-                </h2>
-                <div className="p-4 bg-red-50 rounded-lg border border-red-100 mb-4">
-                  <p className="text-red-800 font-semibold">
-                    ❌ Kami TIDAK menjual informasi pribadi Anda
+            {/* Commitment */}
+            <div className="p-8 bg-emerald-50 rounded-2xl border border-emerald-100 mb-12">
+              <div className="flex items-start gap-4">
+                <span className="text-4xl">🔒</span>
+                <div>
+                  <h2 className="text-xl font-bold text-emerald-800 mb-2">Komitmen Kami</h2>
+                  <p className="text-emerald-700">
+                    Kami sangat menghargai privasi Anda. <strong>Kami TIDAK menjual data pribadi
+                    Anda kepada pihak ketiga.</strong> Data Anda hanya digunakan untuk meningkatkan
+                    pengalaman belajar Anda di ILMUNA.
                   </p>
                 </div>
-                <p className="text-gray-600 leading-relaxed">
-                  Informasi hanya dibagikan dengan:
-                </p>
-                <ul className="space-y-2 text-gray-600 mt-2">
-                  <li className="flex items-start gap-2">
-                    <span className="text-gray-400 mt-1">•</span>
-                    Penyedia layanan pihak ketiga (payment gateway) untuk memproses donasi
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <span className="text-gray-400 mt-1">•</span>
-                    Otoritas hukum jika diwajibkan oleh undang-undang
-                  </li>
-                </ul>
-              </section>
+              </div>
+            </div>
 
-              <section className="mb-10">
-                <h2 className="text-2xl font-bold text-gray-900 mb-4 flex items-center gap-3">
-                  <span className="w-8 h-8 bg-emerald-100 rounded-lg flex items-center justify-center text-emerald-600 text-sm font-bold">6</span>
-                  Kontak Privasi
-                </h2>
-                <p className="text-gray-600 leading-relaxed">
-                  Untuk pertanyaan tentang privasi, hubungi:
-                </p>
-                <div className="mt-4 p-4 bg-gray-50 rounded-lg">
-                  <p className="text-gray-700">
-                    📧 Email: <a href="mailto:pendtiumpraz@gmail.com" className="text-emerald-600 hover:underline">pendtiumpraz@gmail.com</a><br />
-                    📱 WhatsApp: <a href="https://wa.me/6281319504441" className="text-emerald-600 hover:underline">+62 813-1950-4441</a>
+            {/* Data Collection */}
+            <div className="mb-12">
+              <h2 className="text-2xl font-bold text-gray-900 mb-6 flex items-center gap-3">
+                <span className="w-10 h-10 bg-emerald-100 rounded-xl flex items-center justify-center text-emerald-600 text-sm font-bold">1</span>
+                Informasi yang Kami Kumpulkan
+              </h2>
+              <div className="grid md:grid-cols-2 gap-4">
+                {dataTypes.map((type) => (
+                  <div key={type.title} className="p-5 bg-gray-50 rounded-xl hover:bg-emerald-50 transition-colors">
+                    <div className="flex items-center gap-3 mb-2">
+                      <span className="text-2xl">{type.icon}</span>
+                      <h3 className="font-semibold text-gray-900">{type.title}</h3>
+                    </div>
+                    <p className="text-gray-600 text-sm">{type.desc}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Data Usage */}
+            <div className="mb-12">
+              <h2 className="text-2xl font-bold text-gray-900 mb-6 flex items-center gap-3">
+                <span className="w-10 h-10 bg-emerald-100 rounded-xl flex items-center justify-center text-emerald-600 text-sm font-bold">2</span>
+                Penggunaan Informasi
+              </h2>
+              <p className="text-gray-600 mb-4">Informasi Anda digunakan untuk:</p>
+              <ul className="space-y-3">
+                {[
+                  "Menyediakan dan meningkatkan layanan platform",
+                  "Personalisasi pengalaman belajar sesuai kebutuhan Anda",
+                  "Mengirim notifikasi penting terkait layanan",
+                  "Memproses donasi dan memberikan akses premium",
+                  "Menganalisis penggunaan untuk peningkatan platform",
+                ].map((item, i) => (
+                  <li key={i} className="flex items-start gap-3">
+                    <span className="w-6 h-6 bg-emerald-100 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+                      <span className="text-emerald-600 text-xs">✓</span>
+                    </span>
+                    <span className="text-gray-600">{item}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            {/* Security */}
+            <div className="mb-12">
+              <h2 className="text-2xl font-bold text-gray-900 mb-6 flex items-center gap-3">
+                <span className="w-10 h-10 bg-emerald-100 rounded-xl flex items-center justify-center text-emerald-600 text-sm font-bold">3</span>
+                Keamanan Data
+              </h2>
+              <p className="text-gray-600 mb-6">
+                Kami menerapkan langkah-langkah keamanan tingkat industri untuk melindungi data Anda:
+              </p>
+              <div className="grid md:grid-cols-2 gap-4">
+                {security.map((item) => (
+                  <div key={item.title} className="p-5 bg-gradient-to-br from-emerald-50 to-teal-50 rounded-xl border border-emerald-100">
+                    <div className="flex items-center gap-3 mb-2">
+                      <span className="text-2xl">{item.icon}</span>
+                      <h3 className="font-semibold text-emerald-800">{item.title}</h3>
+                    </div>
+                    <p className="text-emerald-700 text-sm">{item.desc}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* User Rights */}
+            <div className="mb-12">
+              <h2 className="text-2xl font-bold text-gray-900 mb-6 flex items-center gap-3">
+                <span className="w-10 h-10 bg-blue-100 rounded-xl flex items-center justify-center text-blue-600 text-sm font-bold">4</span>
+                Hak Anda
+              </h2>
+              <p className="text-gray-600 mb-6">Sebagai pengguna, Anda memiliki hak penuh atas data Anda:</p>
+              <div className="space-y-4">
+                {rights.map((right, i) => (
+                  <div key={right.title} className="flex items-center gap-4 p-4 bg-gray-50 rounded-xl">
+                    <span className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center text-blue-600 font-bold flex-shrink-0">
+                      {i + 1}
+                    </span>
+                    <div>
+                      <h3 className="font-semibold text-gray-900">{right.title}</h3>
+                      <p className="text-gray-600 text-sm">{right.desc}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <p className="text-gray-500 text-sm mt-4">
+                Untuk menggunakan hak-hak ini, hubungi kami melalui email atau WhatsApp.
+              </p>
+            </div>
+
+            {/* No Selling Data */}
+            <div className="p-6 bg-red-50 rounded-2xl border border-red-100 mb-12">
+              <div className="flex items-start gap-4">
+                <span className="text-3xl">❌</span>
+                <div>
+                  <h3 className="font-bold text-red-800 mb-2">Kami TIDAK Menjual Data Anda</h3>
+                  <p className="text-red-700">
+                    Informasi pribadi Anda tidak pernah dan tidak akan pernah dijual kepada pihak ketiga.
+                    Data hanya dibagikan dengan penyedia layanan (seperti payment gateway) yang
+                    diperlukan untuk operasional platform.
                   </p>
                 </div>
-              </section>
+              </div>
+            </div>
 
+            {/* Cookies */}
+            <div className="mb-12">
+              <h2 className="text-2xl font-bold text-gray-900 mb-4 flex items-center gap-3">
+                <span className="w-10 h-10 bg-emerald-100 rounded-xl flex items-center justify-center text-emerald-600 text-sm font-bold">5</span>
+                Cookie & Penyimpanan Lokal
+              </h2>
+              <p className="text-gray-600 leading-relaxed">
+                Kami menggunakan cookie untuk autentikasi dan menyimpan preferensi pengguna.
+                Cookie esensial diperlukan untuk fungsi dasar platform. Anda dapat mengatur
+                browser untuk menolak cookie, namun ini mungkin mempengaruhi fungsionalitas tertentu.
+              </p>
+            </div>
+
+            {/* Contact */}
+            <div className="p-8 bg-gray-50 rounded-2xl">
+              <h2 className="text-xl font-bold text-gray-900 mb-4">
+                📧 Pertanyaan tentang Privasi?
+              </h2>
+              <p className="text-gray-600 mb-4">
+                Jika ada pertanyaan atau kekhawatiran tentang privasi Anda, silakan hubungi:
+              </p>
+              <div className="space-y-2">
+                <p className="flex items-center gap-2">
+                  <span className="text-emerald-500">📧</span>
+                  <a href="mailto:pendtiumpraz@gmail.com" className="text-emerald-600 hover:underline">
+                    pendtiumpraz@gmail.com
+                  </a>
+                </p>
+                <p className="flex items-center gap-2">
+                  <span className="text-emerald-500">📱</span>
+                  <a href="https://wa.me/6281319504441" className="text-emerald-600 hover:underline">
+                    +62 813-1950-4441
+                  </a>
+                </p>
+              </div>
             </div>
 
             {/* Navigation */}
-            <div className="flex justify-between items-center pt-8 border-t mt-8">
-              <Link href="/terms" className="text-emerald-600 hover:underline">
+            <div className="flex justify-between items-center pt-12 mt-12 border-t">
+              <Link href="/terms" className="text-emerald-600 hover:underline flex items-center gap-2">
                 ← Syarat & Ketentuan
               </Link>
-              <Link href="/contact" className="text-emerald-600 hover:underline">
+              <Link href="/contact" className="text-emerald-600 hover:underline flex items-center gap-2">
                 Hubungi Kami →
               </Link>
             </div>
           </div>
         </div>
-      </main>
+      </section>
 
-      {/* Footer */}
-      <footer className="border-t bg-gray-50 py-8">
-        <div className="container mx-auto px-4 text-center text-gray-500 text-sm">
-          <p>© 2024 ILMUNA. Platform Pendidikan Islam Berbasis AI.</p>
-        </div>
-      </footer>
+      <Footer />
     </div>
   );
 }
