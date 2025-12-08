@@ -1,0 +1,11 @@
+# https://www.robotstxt.org/robotstxt.html
+User-agent: *
+Allow: /
+
+# Disallow admin and API routes
+Disallow: /admin
+Disallow: /api
+Disallow: /dashboard
+
+# Sitemap
+Sitemap: https://islamic-ai-seven.vercel.app/sitemap.xml
