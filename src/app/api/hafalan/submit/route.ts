@@ -31,14 +31,12 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const formData = await request.formData();
-    const itemId = formData.get("itemId") as string;
-    const mode = formData.get("mode") as string; // WITH_TEXT or BLIND
-    const audioFile = formData.get("audio") as File;
+    const body = await request.json();
+    const { itemId, mode, audioData, audioMimeType } = body;
 
-    if (!itemId || !audioFile) {
+    if (!itemId || !audioData) {
       return NextResponse.json(
-        { success: false, error: "itemId and audio are required" },
+        { success: false, error: "itemId and audioData are required" },
         { status: 400 }
       );
     }
@@ -55,15 +53,15 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Convert audio to base64
-    const audioBuffer = await audioFile.arrayBuffer();
-    const audioBase64 = Buffer.from(audioBuffer).toString("base64");
+    const audioBase64 = audioData;
+    const mimeType = audioMimeType || "audio/webm";
 
     // Evaluate with Gemini
     const evaluation = await evaluateHafalan(
       item.arabicText,
       audioBase64,
-      item.type.toLowerCase() as "quran" | "hadits" | "matan"
+      item.type.toLowerCase() as "quran" | "hadits" | "matan",
+      mimeType
     );
 
     // Get current progress
@@ -135,6 +133,13 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
+      submission: {
+        id: `${user.id}-${itemId}-${attemptNumber}`,
+        score: evaluation.score,
+        passed: evaluation.passed,
+        feedbackSummary: evaluation.feedback.summary,
+        createdAt: new Date().toISOString(),
+      },
       data: {
         type: "hafalan_evaluation",
         score: evaluation.score,

@@ -54,24 +54,34 @@ async function seedQuran() {
     try {
       const ayahData = await fetchJSON<{ data: Ayah[] }>(`${KEMENAG_BASE}/Surat/${surah.id}.json`);
       
-      // Seed each ayat individually
+      // Check if surah fully seeded (count ayat)
+      const existingCount = await prisma.hafalanItem.count({
+        where: {
+          type: HafalanType.QURAN,
+          surahNumber: surah.id
+        }
+      });
+      
+      if (existingCount >= surah.count_ayat) {
+        console.log(`⏭️ Skipped (${existingCount}/${surah.count_ayat} ayat)`);
+        totalAyat += existingCount;
+        continue;
+      }
+      
+      // If incomplete, delete and re-seed
+      if (existingCount > 0) {
+        console.log(`🔄 Incomplete (${existingCount}/${surah.count_ayat}), re-seeding...`);
+        await prisma.hafalanItem.deleteMany({
+          where: { type: HafalanType.QURAN, surahNumber: surah.id }
+        });
+      }
+      
+      // Seed each ayat
       for (const ayah of ayahData.data) {
         const minTier = getMinTierByJuz(ayah.juz_id);
         
-        await prisma.hafalanItem.upsert({
-          where: { id: `QURAN-${surah.id}-${ayah.aya_number}` },
-          update: {
-            title: `${surah.surat_name} : ${ayah.aya_number}`,
-            arabicText: ayah.aya_text,
-            translation: ayah.translation_aya_text,
-            surahNumber: surah.id,
-            ayahStart: ayah.aya_number,
-            ayahEnd: ayah.aya_number,
-            juzNumber: ayah.juz_id,
-            minTier,
-            orderIndex: (surah.id * 1000) + ayah.aya_number,
-          },
-          create: {
+        await prisma.hafalanItem.create({
+          data: {
             id: `QURAN-${surah.id}-${ayah.aya_number}`,
             type: HafalanType.QURAN,
             title: `${surah.surat_name} : ${ayah.aya_number}`,
@@ -116,12 +126,15 @@ async function seedQuran() {
 }
 
 async function main() {
-  // Clear existing Quran items first
-  console.log("🗑️  Clearing existing Quran items...");
-  await prisma.hafalanItem.deleteMany({
+  // Using upsert, so no need to delete - will update existing or create new
+  // This allows resuming if seed was interrupted
+  const existingCount = await prisma.hafalanItem.count({
     where: { type: HafalanType.QURAN }
   });
-  console.log("   Done!\n");
+  
+  if (existingCount > 0) {
+    console.log(`📊 Found ${existingCount} existing Quran ayat. Will update/add as needed.\n`);
+  }
   
   await seedQuran();
 }

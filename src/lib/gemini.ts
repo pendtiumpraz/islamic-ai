@@ -71,7 +71,8 @@ export async function* generateChatResponseStream(
 export async function evaluateHafalan(
   arabicText: string,
   audioBase64: string,
-  type: "quran" | "hadits" | "matan"
+  type: "quran" | "hadits" | "matan",
+  mimeType: string = "audio/webm"
 ): Promise<{
   score: number;
   passed: boolean;
@@ -121,7 +122,7 @@ Berikan response dalam format JSON saja, tanpa markdown.`;
       { text: prompt },
       {
         inlineData: {
-          mimeType: "audio/webm",
+          mimeType: mimeType,
           data: audioBase64,
         },
       },

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -37,8 +37,16 @@ export default function HafidzItemPage() {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [showText, setShowText] = useState(true);
-  const [userInput, setUserInput] = useState("");
   const [result, setResult] = useState<Submission | null>(null);
+
+  // Audio recording states
+  const [isRecording, setIsRecording] = useState(false);
+  const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
+  const [audioUrl, setAudioUrl] = useState<string | null>(null);
+  const [recordingTime, setRecordingTime] = useState(0);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const chunksRef = useRef<Blob[]>([]);
+  const timerRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     fetch(`/api/hafalan/items?id=${itemId}`)
@@ -53,20 +61,93 @@ export default function HafidzItemPage() {
       .catch(() => setLoading(false));
   }, [itemId]);
 
+  // Cleanup audio URL on unmount
+  useEffect(() => {
+    return () => {
+      if (audioUrl) URL.revokeObjectURL(audioUrl);
+    };
+  }, [audioUrl]);
+
+  const startRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const mediaRecorder = new MediaRecorder(stream, { mimeType: "audio/webm" });
+      mediaRecorderRef.current = mediaRecorder;
+      chunksRef.current = [];
+
+      mediaRecorder.ondataavailable = (e) => {
+        if (e.data.size > 0) chunksRef.current.push(e.data);
+      };
+
+      mediaRecorder.onstop = () => {
+        const blob = new Blob(chunksRef.current, { type: "audio/webm" });
+        setAudioBlob(blob);
+        setAudioUrl(URL.createObjectURL(blob));
+        stream.getTracks().forEach((track) => track.stop());
+      };
+
+      mediaRecorder.start();
+      setIsRecording(true);
+      setRecordingTime(0);
+      setAudioBlob(null);
+      setAudioUrl(null);
+      setResult(null);
+
+      // Timer
+      timerRef.current = setInterval(() => {
+        setRecordingTime((t) => t + 1);
+      }, 1000);
+    } catch (err) {
+      alert("Tidak dapat mengakses mikrofon. Pastikan izin mikrofon diberikan.");
+      console.error(err);
+    }
+  };
+
+  const stopRecording = () => {
+    if (mediaRecorderRef.current && isRecording) {
+      mediaRecorderRef.current.stop();
+      setIsRecording(false);
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+        timerRef.current = null;
+      }
+    }
+  };
+
+  const resetRecording = () => {
+    if (audioUrl) URL.revokeObjectURL(audioUrl);
+    setAudioBlob(null);
+    setAudioUrl(null);
+    setRecordingTime(0);
+    setResult(null);
+  };
+
   const handleSubmit = async () => {
-    if (!userInput.trim() || submitting) return;
+    if (!audioBlob || submitting) return;
 
     setSubmitting(true);
     setResult(null);
 
     try {
+      // Convert blob to base64
+      const reader = new FileReader();
+      const base64Promise = new Promise<string>((resolve) => {
+        reader.onloadend = () => {
+          const base64 = (reader.result as string).split(",")[1];
+          resolve(base64);
+        };
+      });
+      reader.readAsDataURL(audioBlob);
+      const audioBase64 = await base64Promise;
+
       const res = await fetch("/api/hafalan/submit", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           itemId,
           mode: showText ? "WITH_TEXT" : "BLIND",
-          submittedText: userInput,
+          audioData: audioBase64,
+          audioMimeType: "audio/webm",
         }),
       });
 
@@ -86,6 +167,12 @@ export default function HafidzItemPage() {
     }
   };
 
+  const formatTime = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, "0")}`;
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -99,9 +186,7 @@ export default function HafidzItemPage() {
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
           <p className="text-gray-500 mb-4">Materi tidak ditemukan</p>
-          <Button onClick={() => router.push("/dashboard/hafidz")}>
-            Kembali
-          </Button>
+          <Button onClick={() => router.push("/dashboard/hafidz")}>Kembali</Button>
         </div>
       </div>
     );
@@ -127,11 +212,7 @@ export default function HafidzItemPage() {
           <CardHeader>
             <div className="flex items-center justify-between">
               <CardTitle>Teks Hafalan</CardTitle>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setShowText(!showText)}
-              >
+              <Button variant="outline" size="sm" onClick={() => setShowText(!showText)}>
                 {showText ? "Sembunyikan" : "Tampilkan"} Teks
               </Button>
             </div>
@@ -157,32 +238,83 @@ export default function HafidzItemPage() {
           </CardContent>
         </Card>
 
-        {/* Submission Form */}
+        {/* Audio Recording */}
         <Card className="mb-6">
           <CardHeader>
-            <CardTitle>Setoran Hafalan</CardTitle>
+            <CardTitle>Setoran Hafalan (Audio)</CardTitle>
             <p className="text-sm text-gray-500">
-              Ketik hafalan Anda di bawah ini untuk dievaluasi AI
+              Rekam bacaan Anda untuk dievaluasi AI
             </p>
           </CardHeader>
           <CardContent>
-            <textarea
-              value={userInput}
-              onChange={(e) => setUserInput(e.target.value)}
-              placeholder="Ketik hafalan Anda di sini..."
-              className="w-full h-40 p-4 border rounded-lg font-arabic text-xl text-right leading-[2] resize-none focus:outline-none focus:ring-2 focus:ring-emerald-500"
-              dir="rtl"
-            />
-            <div className="flex items-center justify-between mt-4">
-              <Badge variant="outline">
+            <div className="flex flex-col items-center gap-6 py-4">
+              {/* Recording Indicator */}
+              {isRecording && (
+                <div className="flex items-center gap-3">
+                  <span className="w-4 h-4 bg-red-500 rounded-full animate-pulse"></span>
+                  <span className="text-2xl font-mono text-red-600">{formatTime(recordingTime)}</span>
+                </div>
+              )}
+
+              {/* Audio Player */}
+              {audioUrl && !isRecording && (
+                <div className="w-full">
+                  <audio src={audioUrl} controls className="w-full" />
+                </div>
+              )}
+
+              {/* Recording Buttons */}
+              <div className="flex gap-3">
+                {!isRecording && !audioBlob && (
+                  <Button
+                    size="lg"
+                    onClick={startRecording}
+                    className="bg-red-500 hover:bg-red-600 text-white px-8"
+                  >
+                    <span className="mr-2">🎙️</span> Mulai Rekam
+                  </Button>
+                )}
+
+                {isRecording && (
+                  <Button
+                    size="lg"
+                    onClick={stopRecording}
+                    variant="outline"
+                    className="border-red-500 text-red-500 hover:bg-red-50 px-8"
+                  >
+                    <span className="mr-2">⏹️</span> Stop Rekam
+                  </Button>
+                )}
+
+                {audioBlob && !isRecording && (
+                  <>
+                    <Button size="lg" variant="outline" onClick={resetRecording}>
+                      <span className="mr-2">🔄</span> Rekam Ulang
+                    </Button>
+                    <Button
+                      size="lg"
+                      onClick={handleSubmit}
+                      disabled={submitting}
+                      className="bg-emerald-500 hover:bg-emerald-600 text-white px-8"
+                    >
+                      {submitting ? (
+                        <>
+                          <span className="mr-2 animate-spin">⏳</span> Mengevaluasi...
+                        </>
+                      ) : (
+                        <>
+                          <span className="mr-2">📤</span> Kirim Setoran
+                        </>
+                      )}
+                    </Button>
+                  </>
+                )}
+              </div>
+
+              {/* Mode Badge */}
+              <Badge variant="outline" className="mt-2">
                 Mode: {showText ? "Dengan Teks" : "Tanpa Teks (Ujian)"}
               </Badge>
-              <Button
-                onClick={handleSubmit}
-                disabled={submitting || !userInput.trim()}
-              >
-                {submitting ? "Mengevaluasi..." : "Kirim Setoran"}
-              </Button>
             </div>
           </CardContent>
         </Card>
@@ -220,10 +352,7 @@ export default function HafidzItemPage() {
             <CardContent>
               <div className="space-y-3">
                 {submissions.slice(0, 5).map((sub) => (
-                  <div
-                    key={sub.id}
-                    className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
-                  >
+                  <div key={sub.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                     <div>
                       <p className="text-sm text-gray-500">
                         {new Date(sub.createdAt).toLocaleDateString("id-ID", {
