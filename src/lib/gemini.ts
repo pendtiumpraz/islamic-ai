@@ -10,9 +10,9 @@ export const geminiModel = genAI.getGenerativeModel({
   model: "gemini-2.0-flash-exp",
 });
 
-// Model khusus untuk audio (lebih stabil)
+// Model untuk audio - Gemini 2.0 Flash
 export const geminiAudioModel = genAI.getGenerativeModel({
-  model: "gemini-1.5-flash",
+  model: "gemini-2.0-flash-exp",
 });
 
 export interface ChatMessage {
