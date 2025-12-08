@@ -12,16 +12,26 @@ export const authOptions: NextAuthOptions = {
     }),
   ],
   callbacks: {
-    async session({ session, user }) {
-      if (session.user) {
-        session.user.id = user.id;
+    async jwt({ token, user, account }) {
+      if (user) {
+        token.id = user.id;
+      }
+      if (account) {
+        token.accessToken = account.access_token;
+      }
+      return token;
+    },
+    async session({ session, token }) {
+      if (session.user && token) {
+        session.user.id = token.id as string;
         
-        // Get full user data
+        // Get full user data from database
         const dbUser = await prisma.user.findUnique({
-          where: { id: user.id },
+          where: { id: token.id as string },
           select: {
             id: true,
             tier: true,
+            role: true,
             totalDonation: true,
             preferredLang: true,
             dailyChatCount: true,
@@ -32,6 +42,7 @@ export const authOptions: NextAuthOptions = {
 
         if (dbUser) {
           session.user.tier = dbUser.tier;
+          session.user.role = dbUser.role;
           session.user.totalDonation = dbUser.totalDonation;
           session.user.preferredLang = dbUser.preferredLang;
           session.user.dailyChatCount = dbUser.dailyChatCount;
@@ -41,21 +52,11 @@ export const authOptions: NextAuthOptions = {
       }
       return session;
     },
-    async signIn({ user, account }) {
-      if (account?.provider === "google") {
-        // Update googleId if not set
-        const existingUser = await prisma.user.findUnique({
-          where: { email: user.email! },
-        });
-
-        if (existingUser && !existingUser.googleId) {
-          await prisma.user.update({
-            where: { id: existingUser.id },
-            data: { googleId: account.providerAccountId },
-          });
-        }
-      }
-      return true;
+    async redirect({ url, baseUrl }) {
+      // After sign in, redirect to dashboard
+      if (url.startsWith(baseUrl)) return url;
+      if (url.startsWith("/")) return `${baseUrl}${url}`;
+      return `${baseUrl}/dashboard`;
     },
   },
   pages: {
@@ -63,7 +64,7 @@ export const authOptions: NextAuthOptions = {
     error: "/login",
   },
   session: {
-    strategy: "database",
+    strategy: "jwt",
   },
   secret: process.env.NEXTAUTH_SECRET,
 };

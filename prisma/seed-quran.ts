@@ -28,11 +28,6 @@ async function fetchJSON<T>(url: string): Promise<T> {
   return res.json();
 }
 
-// Determine minTier based on Juz
-// FREE: Juz 30 only (Surah 78-114)
-// BRONZE: Juz 29-30
-// SILVER: Juz 26-30
-// GOLD/PATRON: All 30 Juz
 function getMinTierByJuz(juzNumber: number): Tier {
   if (juzNumber === 30) return Tier.FREE;
   if (juzNumber === 29) return Tier.BRONZE;
@@ -41,118 +36,67 @@ function getMinTierByJuz(juzNumber: number): Tier {
 }
 
 async function seedQuran() {
-  console.log("🌱 Seeding ALL 114 Surahs from Kemenag...\n");
+  console.log("🌱 Seeding ALL Ayat from 114 Surahs (Kemenag)...\n");
   console.log("Tier Access:");
-  console.log("  - FREE: Juz 30 (Surah 78-114)");
+  console.log("  - FREE: Juz 30");
   console.log("  - BRONZE: Juz 29-30");
   console.log("  - SILVER: Juz 26-30");
   console.log("  - GOLD/PATRON: All 30 Juz\n");
 
-  // Fetch surah list
   const surahList = await fetchJSON<{ data: Surah[] }>(`${KEMENAG_BASE}/Daftar%20Surat.json`);
   
-  let successCount = 0;
+  let totalAyat = 0;
   let errorCount = 0;
 
   for (const surah of surahList.data) {
-    process.stdout.write(`  📖 Surah ${surah.id}: ${surah.surat_name}... `);
+    process.stdout.write(`  📖 Surah ${surah.id}: ${surah.surat_name} (${surah.count_ayat} ayat)... `);
     
     try {
       const ayahData = await fetchJSON<{ data: Ayah[] }>(`${KEMENAG_BASE}/Surat/${surah.id}.json`);
       
-      // Get juz from first ayah
-      const juzNumber = ayahData.data[0]?.juz_id || 30;
-      const minTier = getMinTierByJuz(juzNumber);
-      
-      // Combine all ayahs into one text
-      const arabicText = ayahData.data
-        .map(a => `${a.aya_text} ﴿${a.aya_number}﴾`)
-        .join(" ");
-      
-      const translation = ayahData.data
-        .map(a => `${a.aya_number}. ${a.translation_aya_text}`)
-        .join(" ");
+      // Seed each ayat individually
+      for (const ayah of ayahData.data) {
+        const minTier = getMinTierByJuz(ayah.juz_id);
+        
+        await prisma.hafalanItem.upsert({
+          where: { id: `QURAN-${surah.id}-${ayah.aya_number}` },
+          update: {
+            title: `${surah.surat_name} : ${ayah.aya_number}`,
+            arabicText: ayah.aya_text,
+            translation: ayah.translation_aya_text,
+            surahNumber: surah.id,
+            ayahStart: ayah.aya_number,
+            ayahEnd: ayah.aya_number,
+            juzNumber: ayah.juz_id,
+            minTier,
+            orderIndex: (surah.id * 1000) + ayah.aya_number,
+          },
+          create: {
+            id: `QURAN-${surah.id}-${ayah.aya_number}`,
+            type: HafalanType.QURAN,
+            title: `${surah.surat_name} : ${ayah.aya_number}`,
+            arabicText: ayah.aya_text,
+            translation: ayah.translation_aya_text,
+            surahNumber: surah.id,
+            ayahStart: ayah.aya_number,
+            ayahEnd: ayah.aya_number,
+            juzNumber: ayah.juz_id,
+            minTier,
+            orderIndex: (surah.id * 1000) + ayah.aya_number,
+          },
+        });
+        
+        totalAyat++;
+      }
 
-      // Create hafalan item for full surah
-      await prisma.hafalanItem.upsert({
-        where: { id: `QURAN-${surah.id}-full` },
-        update: {
-          title: `Surah ${surah.surat_name}`,
-          arabicText,
-          translation,
-          surahNumber: surah.id,
-          ayahStart: 1,
-          ayahEnd: surah.count_ayat,
-          juzNumber,
-          minTier,
-          orderIndex: surah.id,
-        },
-        create: {
-          id: `QURAN-${surah.id}-full`,
-          type: HafalanType.QURAN,
-          title: `Surah ${surah.surat_name}`,
-          arabicText,
-          translation,
-          surahNumber: surah.id,
-          ayahStart: 1,
-          ayahEnd: surah.count_ayat,
-          juzNumber,
-          minTier,
-          orderIndex: surah.id,
-        },
-      });
-
-      console.log(`✓ (Juz ${juzNumber}, ${minTier})`);
-      successCount++;
+      console.log(`✓`);
       
       // Small delay to avoid rate limiting
-      await new Promise(resolve => setTimeout(resolve, 30));
+      await new Promise(resolve => setTimeout(resolve, 50));
     } catch {
       console.log(`✗ Error`);
       errorCount++;
     }
-  }
-
-  // Add Ayat Kursi (special - FREE access)
-  console.log("\n  📖 Fetching Ayat Kursi (Al-Baqarah 255)...");
-  try {
-    const baqarahData = await fetchJSON<{ data: Ayah[] }>(`${KEMENAG_BASE}/Surat/2.json`);
-    const ayatKursi = baqarahData.data.find(a => a.aya_number === 255);
-    
-    if (ayatKursi) {
-      await prisma.hafalanItem.upsert({
-        where: { id: "QURAN-2-255" },
-        update: {
-          title: "Ayat Kursi",
-          arabicText: ayatKursi.aya_text,
-          translation: ayatKursi.translation_aya_text,
-          surahNumber: 2,
-          ayahStart: 255,
-          ayahEnd: 255,
-          juzNumber: 3,
-          minTier: Tier.FREE, // Special: FREE access
-          orderIndex: 0, // High priority
-        },
-        create: {
-          id: "QURAN-2-255",
-          type: HafalanType.QURAN,
-          title: "Ayat Kursi",
-          arabicText: ayatKursi.aya_text,
-          translation: ayatKursi.translation_aya_text,
-          surahNumber: 2,
-          ayahStart: 255,
-          ayahEnd: 255,
-          juzNumber: 3,
-          minTier: Tier.FREE,
-          orderIndex: 0,
-        },
-      });
-      console.log("    ✓ Ayat Kursi (FREE access)");
-      successCount++;
-    }
-  } catch {
-    console.log("    ✗ Error fetching Ayat Kursi");
-    errorCount++;
   }
 
   // Summary
@@ -163,15 +107,22 @@ async function seedQuran() {
   });
 
   console.log("\n" + "=".repeat(50));
-  console.log(`✅ Seeded ${successCount} items (${errorCount} errors)`);
-  console.log("\nAccess by Tier:");
+  console.log(`✅ Seeded ${totalAyat} ayat (${errorCount} errors)`);
+  console.log("\nAyat by Tier:");
   for (const c of counts) {
-    console.log(`  ${c.minTier}: ${c._count} surahs`);
+    console.log(`  ${c.minTier}: ${c._count} ayat`);
   }
   console.log("=".repeat(50));
 }
 
 async function main() {
+  // Clear existing Quran items first
+  console.log("🗑️  Clearing existing Quran items...");
+  await prisma.hafalanItem.deleteMany({
+    where: { type: HafalanType.QURAN }
+  });
+  console.log("   Done!\n");
+  
   await seedQuran();
 }
 

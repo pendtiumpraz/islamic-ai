@@ -1,7 +1,7 @@
-import { Tier, Language, HafalanType, HafalanStatus, SubmissionMode, ModuleCategory } from "@prisma/client";
+import { Tier, Language, Role, HafalanType, HafalanStatus, SubmissionMode, ModuleCategory } from "@prisma/client";
 
 // Re-export Prisma enums
-export { Tier, Language, HafalanType, HafalanStatus, SubmissionMode, ModuleCategory };
+export { Tier, Language, Role, HafalanType, HafalanStatus, SubmissionMode, ModuleCategory };
 
 // NextAuth session extension
 declare module "next-auth" {
@@ -12,6 +12,7 @@ declare module "next-auth" {
       email?: string | null;
       image?: string | null;
       tier: Tier;
+      role: Role;
       totalDonation: number;
       preferredLang: Language;
       dailyChatCount: number;
@@ -23,8 +24,16 @@ declare module "next-auth" {
   interface User {
     id: string;
     tier: Tier;
+    role: Role;
     totalDonation: number;
     preferredLang: Language;
+  }
+}
+
+declare module "next-auth/jwt" {
+  interface JWT {
+    id: string;
+    accessToken?: string;
   }
 }
 
