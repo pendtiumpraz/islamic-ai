@@ -122,10 +122,30 @@ export default function AdminUsersPage() {
 
       if (res.ok) {
         fetchUsers(pagination.page);
-        setSelectedUser(null);
+        setSelectedUser((prev) => prev ? { ...prev, role: newRole } : null);
       }
     } catch (error) {
       console.error("Failed to update user:", error);
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleUpdateTier = async (userId: string, newTier: string) => {
+    setActionLoading(true);
+    try {
+      const res = await fetch(`/api/admin/users/${userId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ tier: newTier }),
+      });
+
+      if (res.ok) {
+        fetchUsers(pagination.page);
+        setSelectedUser((prev) => prev ? { ...prev, tier: newTier } : null);
+      }
+    } catch (error) {
+      console.error("Failed to update tier:", error);
     } finally {
       setActionLoading(false);
     }
@@ -388,6 +408,24 @@ export default function AdminUsersPage() {
                         className={selectedUser.role === role ? roleColors[role] : "border-gray-700"}
                       >
                         {role}
+                      </Button>
+                    ))}
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-gray-400 text-sm mb-2">Tier (License)</label>
+                  <div className="grid grid-cols-5 gap-2">
+                    {["FREE", "BRONZE", "SILVER", "GOLD", "PATRON"].map((tier) => (
+                      <Button
+                        key={tier}
+                        variant={selectedUser.tier === tier ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => handleUpdateTier(selectedUser.id, tier)}
+                        disabled={actionLoading}
+                        className={selectedUser.tier === tier ? tierColors[tier] : "border-gray-700 text-gray-400"}
+                      >
+                        {tier}
                       </Button>
                     ))}
                   </div>

@@ -158,6 +158,26 @@ export function Sidebar({ onClose }: SidebarProps) {
             </Link>
           ))}
         </div>
+
+        {/* Admin Link */}
+        {(user?.role === "ADMIN" || user?.role === "SUPER_ADMIN") && (
+          <div className="pt-6">
+            <p className="px-3 text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">
+              Admin
+            </p>
+            <Link
+              href="/admin"
+              onClick={onClose}
+              className="flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 text-red-600 hover:bg-red-50"
+            >
+              <span className="text-xl">🛡️</span>
+              <span>Admin Panel</span>
+              <Badge className="ml-auto bg-red-100 text-red-600 text-xs">
+                {user?.role === "SUPER_ADMIN" ? "Super" : "Admin"}
+              </Badge>
+            </Link>
+          </div>
+        )}
       </nav>
 
       {/* Upgrade Banner */}

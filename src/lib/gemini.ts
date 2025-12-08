@@ -10,6 +10,11 @@ export const geminiModel = genAI.getGenerativeModel({
   model: "gemini-2.0-flash-exp",
 });
 
+// Model khusus untuk audio (lebih stabil)
+export const geminiAudioModel = genAI.getGenerativeModel({
+  model: "gemini-1.5-flash",
+});
+
 export interface ChatMessage {
   role: "user" | "model";
   parts: { text: string }[];
@@ -118,7 +123,12 @@ Tugas:
 Berikan response dalam format JSON saja, tanpa markdown.`;
 
   try {
-    const result = await geminiModel.generateContent([
+    console.log("Evaluating hafalan with Gemini...");
+    console.log("Audio mimeType:", mimeType);
+    console.log("Audio base64 length:", audioBase64.length);
+    console.log("Type:", type);
+    
+    const result = await geminiAudioModel.generateContent([
       { text: prompt },
       {
         inlineData: {
@@ -129,6 +139,8 @@ Berikan response dalam format JSON saja, tanpa markdown.`;
     ]);
 
     const text = result.response.text();
+    console.log("Gemini response:", text);
+    
     const jsonMatch = text.match(/\{[\s\S]*\}/);
     
     if (jsonMatch) {
@@ -138,15 +150,17 @@ Berikan response dalam format JSON saja, tanpa markdown.`;
     throw new Error("Invalid response format");
   } catch (error) {
     console.error("Hafalan evaluation error:", error);
+    console.error("Error details:", JSON.stringify(error, null, 2));
     
-    // Return default error response
+    // Return error with more details
+    const errorMessage = error instanceof Error ? error.message : "Unknown error";
     return {
       score: 0,
       passed: false,
       feedback: {
-        summary: "Maaf, terjadi kesalahan saat mengevaluasi hafalan.",
+        summary: `Maaf, terjadi kesalahan saat mengevaluasi hafalan. (${errorMessage})`,
         corrections: [],
-        tips: ["Silakan coba lagi"],
+        tips: ["Silakan coba lagi", "Pastikan audio terrekam dengan jelas"],
         encouragement: "Tetap semangat menghafal!",
       },
     };
