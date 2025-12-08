@@ -202,6 +202,12 @@ export default function SurahDetailPage() {
         }));
       }
       
+      // Clear audio after evaluation - must record again for next evaluation
+      if (audioUrl) URL.revokeObjectURL(audioUrl);
+      setAudioBlob(null);
+      setAudioUrl(null);
+      setRecordingTime(0);
+      
       // Refetch to get updated progress from database
       setTimeout(() => fetchAyahs(), 500);
     } catch (error) {
