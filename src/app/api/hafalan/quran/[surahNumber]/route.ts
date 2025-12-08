@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
 
+export const dynamic = "force-dynamic";
+
 // GET /api/hafalan/quran/[surahNumber] - Get all ayahs of a surah
 export async function GET(
   request: NextRequest,

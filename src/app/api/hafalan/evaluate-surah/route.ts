@@ -122,13 +122,44 @@ RULES:
 
     const evaluation = JSON.parse(jsonMatch[0]);
 
-    // Save progress for each evaluated ayah
+    // Save progress and submission for each evaluated ayah
     if (evaluation.ayahScores && Array.isArray(evaluation.ayahScores)) {
       for (const ayahScore of evaluation.ayahScores) {
         const ayahData = ayahs.find((a) => a.ayahStart === ayahScore.ayahNumber);
         if (!ayahData) continue;
 
-        // Upsert progress
+        // Get existing progress to compare best score
+        const existingProgress = await prisma.hafalanProgress.findUnique({
+          where: {
+            userId_itemId: {
+              userId: user.id,
+              itemId: ayahData.id,
+            },
+          },
+        });
+
+        const currentBestScore = existingProgress?.bestScore || 0;
+        const newBestScore = Math.max(currentBestScore, ayahScore.score);
+        const isPassed = newBestScore >= 70;
+        const isFirstPass = !existingProgress?.firstPassedAt && ayahScore.score >= 70;
+
+        // Save submission record (history)
+        await prisma.hafalanSubmission.create({
+          data: {
+            userId: user.id,
+            itemId: ayahData.id,
+            itemType: "QURAN",
+            mode: "WITH_TEXT",
+            score: ayahScore.score,
+            passed: ayahScore.score >= 70,
+            feedbackSummary: ayahScore.feedback || "",
+            feedbackCorrections: [],
+            feedbackTips: [],
+            attemptNumber: (existingProgress?.totalAttempts || 0) + 1,
+          },
+        });
+
+        // Upsert progress (keep best score)
         await prisma.hafalanProgress.upsert({
           where: {
             userId_itemId: {
@@ -137,14 +168,12 @@ RULES:
             },
           },
           update: {
-            bestScore: {
-              set: Math.max(ayahScore.score, 0),
-            },
+            bestScore: newBestScore,
             totalAttempts: { increment: 1 },
             lastAttemptAt: new Date(),
-            status: ayahScore.score >= 70 ? "PASSED" : "IN_PROGRESS",
-            canProceed: ayahScore.score >= 70,
-            firstPassedAt: ayahScore.score >= 70 ? new Date() : undefined,
+            status: isPassed ? "PASSED" : "IN_PROGRESS",
+            canProceed: isPassed,
+            firstPassedAt: isFirstPass ? new Date() : existingProgress?.firstPassedAt,
           },
           create: {
             userId: user.id,

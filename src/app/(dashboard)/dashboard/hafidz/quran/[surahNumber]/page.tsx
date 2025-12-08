@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -49,18 +49,29 @@ export default function SurahDetailPage() {
   const chunksRef = useRef<Blob[]>([]);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
 
-  useEffect(() => {
+  const fetchAyahs = useCallback(() => {
     fetch(`/api/hafalan/quran/${surahNumber}`)
       .then((res) => res.json())
       .then((data) => {
         if (data.success) {
-          setAyahs(data.ayahs || []);
+          // Map progress to ayah format
+          const ayahsWithScores = (data.ayahs || []).map((a: { id: string; ayahNumber: number; arabicText: string; translation: string | null; progress?: { bestScore: number; status: string } }) => ({
+            ...a,
+            score: a.progress?.bestScore,
+            status: a.progress?.status === "PASSED" ? "correct" as const : 
+                   a.progress?.status === "IN_PROGRESS" ? "partial" as const : undefined,
+          }));
+          setAyahs(ayahsWithScores);
           setSurahName(data.surahName || `Surah ${surahNumber}`);
         }
         setLoading(false);
       })
       .catch(() => setLoading(false));
   }, [surahNumber]);
+
+  useEffect(() => {
+    fetchAyahs();
+  }, [fetchAyahs]);
 
   useEffect(() => {
     return () => {
@@ -152,19 +163,27 @@ export default function SurahDetailPage() {
 
       setResult(data.evaluation);
       
-      // Update ayah scores
+      // Update ayah scores locally for immediate feedback
       if (data.evaluation?.ayahScores) {
         setAyahs(prev => prev.map(ayah => {
           const scoreData = data.evaluation.ayahScores.find(
             (s: { ayahNumber: number }) => s.ayahNumber === ayah.ayahNumber
           );
-          return {
-            ...ayah,
-            score: scoreData?.score,
-            status: scoreData?.status || "not_recited",
-          };
+          if (scoreData) {
+            // Keep higher score
+            const newScore = Math.max(ayah.score || 0, scoreData.score);
+            return {
+              ...ayah,
+              score: newScore,
+              status: scoreData.status || (newScore >= 80 ? "correct" : newScore >= 50 ? "partial" : "incorrect"),
+            };
+          }
+          return ayah;
         }));
       }
+      
+      // Refetch to get updated progress from database
+      setTimeout(() => fetchAyahs(), 500);
     } catch (error) {
       alert(error instanceof Error ? error.message : "Terjadi kesalahan");
     } finally {
